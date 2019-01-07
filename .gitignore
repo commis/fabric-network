@@ -1,0 +1,5 @@
+### IntelliJ IDEA ###
+.idea/
+*.iml
+source/crypto-config/
+source/scripts/temp.sh

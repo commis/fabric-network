@@ -1,0 +1,35 @@
+# Copyright IBM Corp. All Rights Reserved.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+version: '2'
+
+services:
+  peerName:
+    container_name: peerName
+    extends:
+      file: base/peer-base.yaml
+      service: peer-base
+    network_mode: host
+    extra_hosts:
+#      - "orderer0:${orderer0IP}"
+#      - "peer0:${peer0IP}"
+    environment:
+      - CORE_CHAINCODE_LOGGING_LEVEL=DEBUG
+      - CORE_CHAINCODE_LOGGING_SHIM=DEBUG
+      - CORE_PEER_ID=peerName
+      - CORE_PEER_ADDRESS=peerName:7051
+      - CORE_PEER_CHAINCODEADDRESS=peerName:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peerName:7051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1:7051
+      - CORE_PEER_LOCALMSPID=${ORG1_PEER_LOCALMSPID}
+    volumes:
+      - /var/run/:/host/var/run/
+      - ${ORG1_PEER_SERVER_LOCAL}/peer0.yzhorg.net/msp:${ORG1_PEER_SERVER_REMOTE}/msp
+      - ${ORG1_PEER_SERVER_LOCAL}/peer0.yzhorg.net/tls:${ORG1_PEER_SERVER_REMOTE}/tls
+    ports:
+      - 7051:7051
+      - 7052:7052
+      - 7053:7053
