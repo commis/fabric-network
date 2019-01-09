@@ -20,17 +20,19 @@ function getToolsFullPath() {
 ## Using docker-compose template replace private key file names with constants
 function replacePrivateKey () {
     [[ "$(uname -s | grep Darwin)" == "Darwin" ]] && OPTS="-it" || OPTS="-i"
-    
-    CURRENT_DIR=$PWD
-    cd ${SOURCE_ROOT}/crypto-config/peerOrganizations/yzhorg.net/ca/
-    PRIV_KEY=$(ls *_sk)
-    cd $CURRENT_DIR
-    sed $OPTS "s/CA1_PRIVATE_KEY/${PRIV_KEY}/g" ${SOURCE_ROOT}/docker-compose-e2e.yaml
 
-#    cd ${SOURCE_ROOT}/crypto-config/peerOrganizations/org2.yzhorg.net/ca/
-#    PRIV_KEY=$(ls *_sk)
-#    cd $CURRENT_DIR
-#    sed $OPTS "s/CA2_PRIVATE_KEY/${PRIV_KEY}/g" ${SOURCE_ROOT}/docker-compose-e2e.yaml
+    CURRENT_DIR=$PWD
+    if [[ -f "${SOURCE_ROOT}/docker-compose-e2e.yaml" ]]; then
+        cd ${SOURCE_ROOT}/crypto-config/peerOrganizations/yzhorg.net/ca/
+        PRIV_KEY=$(ls *_sk)
+        cd $CURRENT_DIR
+        sed $OPTS "s/CA1_PRIVATE_KEY/${PRIV_KEY}/g" ${SOURCE_ROOT}/docker-compose-e2e.yaml
+
+#        cd ${SOURCE_ROOT}/crypto-config/peerOrganizations/org2.yzhorg.net/ca/
+#        PRIV_KEY=$(ls *_sk)
+#        cd $CURRENT_DIR
+#        sed $OPTS "s/CA2_PRIVATE_KEY/${PRIV_KEY}/g" ${SOURCE_ROOT}/docker-compose-e2e.yaml
+    fi
 }
 
 ## Generates Org certs using cryptogen tool
@@ -65,7 +67,7 @@ function generateIdemixMaterial() {
 	echo "##### Generate idemix crypto material using idemixgen tool #########"
 	echo "####################################################################"
 
-	CURDIR=`pwd`
+	current=`pwd`
 	IDEMIXMATDIR=${SOURCE_ROOT}/crypto-config/idemix
 	mkdir -p $IDEMIXMATDIR
 	cd $IDEMIXMATDIR
@@ -76,7 +78,7 @@ function generateIdemixMaterial() {
 	# Generate the idemix signer keys
 	$IDEMIXGEN signerconfig -u OU1 -e OU1 -r 1
 
-	cd $CURDIR
+	cd ${current}
 }
 
 ## Generate orderer genesis block , channel configuration transaction and anchor peer update transactions
@@ -114,7 +116,11 @@ function generateChannelArtifacts() {
 	echo
 }
 
+current=`pwd`
+cd ${SOURCE_ROOT}
+
 generateCerts
 generateIdemixMaterial
 replacePrivateKey
 generateChannelArtifacts
+cd ${current}
