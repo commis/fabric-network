@@ -82,6 +82,7 @@ function networkUp() {
         source generateArtifacts.sh $CH_NAME
     fi
 
+    cd ${SOURCE_ROOT}/scripts
     updateNetworkName ${SOURCE_ROOT}/base/peer-base.yaml
     CHANNEL_NAME=$CH_NAME TIMEOUT=$CLI_TIMEOUT docker-compose -f $COMPOSE_FILE up -d 2>&1
     if [[ $? -ne 0 ]]; then

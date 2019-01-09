@@ -5,7 +5,7 @@ set -e
 # all global environment parameter
 SOURCE_ROOT=$(cd `dirname $(readlink -f "$0")`/.. && pwd)
 OS_ARCH=$(echo "$(uname -s|tr '[:upper:]' '[:lower:]'|sed 's/mingw64_nt.*/windows/')-$(uname -m | sed 's/x86_64/amd64/g')" | awk '{print tolower($0)}')
-echo ${OS_ARCH}
+# echo ${OS_ARCH}
 
 export FABRIC_CFG_PATH=${SOURCE_ROOT}
 
@@ -21,16 +21,16 @@ function getToolsFullPath() {
 function replacePrivateKey () {
     [[ "$(uname -s | grep Darwin)" == "Darwin" ]] && OPTS="-it" || OPTS="-i"
 
-    CURRENT_DIR=$PWD
+    current=`pwd`
     if [[ -f "${SOURCE_ROOT}/docker-compose-e2e.yaml" ]]; then
         cd ${SOURCE_ROOT}/crypto-config/peerOrganizations/yzhorg.net/ca/
         PRIV_KEY=$(ls *_sk)
-        cd $CURRENT_DIR
+        cd $current
         sed $OPTS "s/CA1_PRIVATE_KEY/${PRIV_KEY}/g" ${SOURCE_ROOT}/docker-compose-e2e.yaml
 
 #        cd ${SOURCE_ROOT}/crypto-config/peerOrganizations/org2.yzhorg.net/ca/
 #        PRIV_KEY=$(ls *_sk)
-#        cd $CURRENT_DIR
+#        cd $current
 #        sed $OPTS "s/CA2_PRIVATE_KEY/${PRIV_KEY}/g" ${SOURCE_ROOT}/docker-compose-e2e.yaml
     fi
 }
@@ -117,6 +117,7 @@ function generateChannelArtifacts() {
 }
 
 current=`pwd`
+echo $current
 cd ${SOURCE_ROOT}
 
 generateCerts
