@@ -32,9 +32,9 @@ services:
       - ZOO_MY_ID=1
       - ZOO_SERVERS=server.1=zookeeper0:2888:3888 server.2=zookeeper1:2888:3888 server.3=zookeeper2:2888:3888
     ports:
-        - '2181'
-        - '2888'
-        - '3888'
+      - '2181'
+      - '2888'
+      - '3888'
 
   zookeeper1:
     container_name: zookeeper1
@@ -63,14 +63,14 @@ services:
       file: base/docker-compose-base.yaml
       service: kafka
     environment:
-        - KAFKA_BROKER_ID=0
-        - KAFKA_MIN_INSYNC_REPLICAS=2
-        - KAFKA_DEFAULT_REPLICATION_FACTOR=3
-        - KAFKA_ZOOKEEPER_CONNECT=zookeeper0:2181,zookeeper1:2181,zookeeper2:2181
+      - KAFKA_BROKER_ID=0
+      - KAFKA_MIN_INSYNC_REPLICAS=2
+      - KAFKA_DEFAULT_REPLICATION_FACTOR=3
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper0:2181,zookeeper1:2181,zookeeper2:2181
     depends_on:
-        - zookeeper0
-        - zookeeper1
-        - zookeeper2
+      - zookeeper0
+      - zookeeper1
+      - zookeeper2
 
   kafka1:
     container_name: kafka1
@@ -167,6 +167,10 @@ services:
       file: base/peer-base.yaml
       service: peer-base
     environment:
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=password
       - CORE_CHAINCODE_LOGGING_LEVEL=DEBUG
       - CORE_CHAINCODE_LOGGING_SHIM=DEBUG
       - CORE_PEER_ID=peer0
@@ -204,6 +208,10 @@ services:
       file: base/peer-base.yaml
       service: peer-base
     environment:
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=password
       - CORE_CHAINCODE_LOGGING_LEVEL=DEBUG
       - CORE_CHAINCODE_LOGGING_SHIM=DEBUG
       - CORE_PEER_ID=peer1
