@@ -2,19 +2,18 @@
 
 set -e
 
-[[ "$(uname -s | grep Darwin)" == "Darwin" ]] && SED_OPTS="-it" || SED_OPTS="-i"
-
 # all global environment parameter
 SOURCE_ROOT=$(cd `dirname $(readlink -f "$0")`/.. && pwd)
 REMOTE_USER=$(grep 'REMOTE_USER' ${SOURCE_ROOT}/scripts/.env |cut -d= -f2)
 REMOTE_PASSWORD=$(grep 'REMOTE_PASSWORD' ${SOURCE_ROOT}/scripts/.env |cut -d= -f2)
-REMOTE_SCRIPTDIR=/opt/fabric-data
+REMOTE_SCRIPTDIR=/opt/fabric-network
 COMPOSE_FILE=${SOURCE_ROOT}/docker-compose-cli.yaml
 OPENSSH_OPTS="MACs umac-64@openssh.com"
 ORG_PEER_JSON=$(grep '^ORG_PEER_SET' ${SOURCE_ROOT}/scripts/.env |awk -F'=' '{print $2}')
 ADDR_NODE_CLI=$(grep '^ADDR_CLI' ${SOURCE_ROOT}/scripts/.env |awk -F'=' '{print $2}')
 
-[[ "$(uname -s | grep Darwin)" == "Darwin" ]] && OPTS="-it" || OPTS="-i"
+[[ "$(uname -s | grep Darwin)" == "Darwin" ]] && SED_OPTS="-it" || SED_OPTS="-i"
+[[ "$(uname -s | grep Darwin)" == "Darwin" ]] && XARGS_OPTS="-t" || XARGS_OPTS="-ti"
 
 function printHelp() {
     echo "Usage: ./`basename $0` [-t up|down] [-c channel-name] [-o timeout]"
@@ -63,7 +62,7 @@ function copyChaincode() {
     sudo sshpass -p ${REMOTE_PASSWORD} scp -r -o "${OPENSSH_OPTS}" -c aes192-cbc $2/* ${REMOTE_USER}@${1}:${3}
 }
 
-function clearContainers() {
+function clearLocalContainers() {
     CONTAINER_IDS=$(docker ps -aq)
     if [[ -z "$CONTAINER_IDS" || "$CONTAINER_IDS" = " " ]]; then
         echo "---- No containers available for deletion ----"
@@ -71,6 +70,24 @@ function clearContainers() {
         docker rm -f $CONTAINER_IDS
     fi
     docker volume prune -f
+}
+
+function clearRemoteContainers() {
+    orgs=$(echo $ORG_PEER_JSON |jq ".orgs"|sed 's/\"//g')
+    for org in ${orgs}; do
+        remote_addr=$(grep "^ADDR_ORG_${org}" ${SOURCE_ROOT}/scripts/.env |awk -F'=' '{print $2}')
+        if [[ "$remote_addr" != "$ADDR_NODE_CLI" ]]; then
+            executeCmd="""
+                if [[ -d ${REMOTE_SCRIPTDIR} ]]; then
+                    docker ps -a  |grep 'dev\|none\|peer[0-9]' |awk '{print \$3}'|xargs ${XARGS_OPTS} docker rm -f {}
+                    docker images |grep 'dev\|none\|peer[0-9]' |awk '{print \$3}'|xargs ${XARGS_OPTS} docker rmi -f {}
+                    docker volume prune -f
+                fi
+                rm -rf ${REMOTE_SCRIPTDIR}/*
+            """
+            sshConn ${remote_addr} "${executeCmd}"
+        fi
+    done
 }
 
 function removeUnwantedImages() {
@@ -100,7 +117,7 @@ function replacePort() {
     total=$(echo $first |awk '{print length($0)-1}')
     realPort=$(expr ${first:0:1} + $number)${first:1:$total}:${array[1]}
 
-    sed $OPTS "s/${3}/${realPort}/g" $compose_file
+    sed $SED_OPTS "s/${3}/${realPort}/g" $compose_file
 }
 
 function replacePeerComposeParameter() {
@@ -109,13 +126,13 @@ function replacePeerComposeParameter() {
     peer_id=$3
     counter=$4
 
-    sed $OPTS "s/PeerName/peer${peer_id}Org${org_id}/g" $compose_file
-    sed $OPTS "s/DBName/couchdb_Peer${peer_id}Org${org_id}/g" $compose_file
-    sed $OPTS "s/PEER_MSPID_NAME/PEER_MSPID_${org_id}/g" $compose_file
-    sed $OPTS "s/PEER_DOMAIN_NAME/PEER_DOMAIN_${org_id}/g" $compose_file
+    sed $SED_OPTS "s/PeerName/peer${peer_id}Org${org_id}/g" $compose_file
+    sed $SED_OPTS "s/DBName/couchdb_Peer${peer_id}Org${org_id}/g" $compose_file
+    sed $SED_OPTS "s/PEER_MSPID_NAME/PEER_MSPID_${org_id}/g" $compose_file
+    sed $SED_OPTS "s/PEER_DOMAIN_NAME/PEER_DOMAIN_${org_id}/g" $compose_file
 
     addr_peer=$(grep "^ADDR_ORG_${org_id}" ${SOURCE_ROOT}/scripts/.env |awk -F'=' '{print $2}')
-    if [[ "$ADDR_NODE_CLI" != "$addr_peer" ]]; then
+    if [[ "$addr_peer" = "$ADDR_NODE_CLI" ]]; then
         replacePort $compose_file $counter "5984:5984"
         replacePort $compose_file $counter "7051:7051"
         replacePort $compose_file $counter "7052:7052"
@@ -123,7 +140,7 @@ function replacePeerComposeParameter() {
     fi
 }
 
-function buildAllPeerNodeCompose() {
+function buildAllPeerCompose() {
     orgs=$(echo $ORG_PEER_JSON |jq ".orgs"|sed 's/\"//g')
     peers=$(echo $ORG_PEER_JSON |jq ".peers"|sed 's/\"//g')
 
@@ -138,13 +155,26 @@ function buildAllPeerNodeCompose() {
     done
 }
 
-function startDockerContainer() {
+function startLocalDockerContainer() {
     compose_file=$1
     TIMEOUT=$CLI_TIMEOUT docker-compose -f $compose_file up -d 2>&1
     if [[ $? -ne 0 ]]; then
       echo "ERROR !!!! Unable to pull the images. ${compose_file}"
       exit 1
     fi
+}
+
+function startRemoteDockerContainer() {
+    peer_file=$1
+    remote_ip=$2
+
+#    copyChaincode ${remote_ip} "${}" "${}"
+    copyDockercompose ${remote_ip} "${peer_file}"
+    copyDockercompose ${remote_ip} "${SOURCE_ROOT}/base"
+    copyDockercompose ${remote_ip} "${SOURCE_ROOT}/scripts/.env"
+
+    executeCmd="TIMEOUT=$CLI_TIMEOUT docker-compose -f ${REMOTE_SCRIPTDIR}/${peer_file##*/} up -d"
+    sshConn ${remote_ip} "cd ${REMOTE_SCRIPTDIR}; ${executeCmd}"
 }
 
 function startAllPeerNode() {
@@ -155,7 +185,13 @@ function startAllPeerNode() {
     for org in ${orgs}; do
         for peer in ${peers}; do
             peer_file=${SOURCE_ROOT}/docker-compose-org${org}_peer${peer}.yaml
-            startDockerContainer ${peer_file}
+
+            addr_peer=$(grep "^ADDR_ORG_${org}" ${SOURCE_ROOT}/scripts/.env |awk -F'=' '{print $2}')
+            if [[ "$addr_peer" != "$ADDR_NODE_CLI" ]]; then
+                startRemoteDockerContainer $peer_file $addr_peer
+            else
+                startLocalDockerContainer $peer_file
+            fi
         done
     done
 }
@@ -171,10 +207,11 @@ function networkUp() {
 
     cd ${SOURCE_ROOT}/scripts
     updateNetworkName ${SOURCE_ROOT}/base/peer-base.yaml
-    buildAllPeerNodeCompose
-    startAllPeerNode
-    startDockerContainer $COMPOSE_FILE
 
+    buildAllPeerCompose
+    startAllPeerNode
+
+    startLocalDockerContainer $COMPOSE_FILE
     docker logs -f cli
 }
 
@@ -184,7 +221,8 @@ function networkDown() {
     fi
 
     #Cleanup the containers and images
-    clearContainers
+    clearLocalContainers
+    clearRemoteContainers
     removeUnwantedImages
 
     unsetEnvGopath
