@@ -4,9 +4,10 @@ set -e
 
 # all global environment parameter
 SOURCE_ROOT=$(cd `dirname $(readlink -f "$0")`/.. && pwd)
+COMPOSE_FILE=${SOURCE_ROOT}/docker-compose-cli.yaml
 OS_ARCH=$(echo "$(uname -s|tr '[:upper:]' '[:lower:]'|sed 's/mingw64_nt.*/windows/')-$(uname -m | sed 's/x86_64/amd64/g')" | awk '{print tolower($0)}')
-# echo ${OS_ARCH}
 
+[[ "$(uname -s | grep Darwin)" == "Darwin" ]] && OPTS="-it" || OPTS="-i"
 export FABRIC_CFG_PATH=${SOURCE_ROOT}
 
 function getToolsFullPath() {
@@ -20,10 +21,8 @@ function getPeerOrgDomain() {
 
 ## Using docker-compose template replace private key file names with constants
 function replacePrivateKey () {
-    [[ "$(uname -s | grep Darwin)" == "Darwin" ]] && OPTS="-it" || OPTS="-i"
-
     current=`pwd`
-    if [[ -f "${SOURCE_ROOT}/docker-compose-e2e.yaml" ]]; then
+    if [[ -f "${COMPOSE_FILE}" ]]; then
         CHANNEL_JSON=$(cat ${SOURCE_ROOT}/scripts/.env |grep '^CHANNEL_SET'|awk -F'=' '{print $2}')
         CHANNEL_SIZE=$(echo ${CHANNEL_JSON} |jq 'length-1')
         for index in $(seq 0 $CHANNEL_SIZE); do
@@ -32,7 +31,7 @@ function replacePrivateKey () {
             cd ${SOURCE_ROOT}/crypto-config/peerOrganizations/${org_domain}/ca/
             PRIV_KEY=$(ls *_sk)
             cd $current
-            sed $OPTS "s/CA${id}_PRIVATE_KEY/${PRIV_KEY}/g" ${SOURCE_ROOT}/docker-compose-e2e.yaml
+            sed $OPTS "s/CA${id}_PRIVATE_KEY/${PRIV_KEY}/g" ${COMPOSE_FILE}
         done
     fi
 }

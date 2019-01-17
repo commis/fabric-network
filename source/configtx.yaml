@@ -69,7 +69,7 @@ Organizations:
       # AnchorPeers defines the location of peers which can be used
       # for cross org gossip communication.  Note, this value is only
       # encoded in the genesis block in the Application section context
-      - Host: peer0.org1
+      - Host: peer0Org1
         Port: 7051
 
   - &Org2
@@ -100,7 +100,7 @@ Organizations:
           # AnchorPeers defines the location of peers which can be used
           # for cross org gossip communication.  Note, this value is only
           # encoded in the genesis block in the Application section context
-          - Host: peer0.org2
+          - Host: peer0Org2
             Port: 7051
 
   - &Org3
@@ -131,7 +131,7 @@ Organizations:
       # AnchorPeers defines the location of peers which can be used
       # for cross org gossip communication.  Note, this value is only
       # encoded in the genesis block in the Application section context
-      - Host: peer0.org3
+      - Host: peer0Org3
         Port: 7051
 
 ################################################################################
@@ -354,14 +354,7 @@ Profiles:
         Organizations:
           - *Org1
           - *Org2
-      SampleConsortiumB:
-        Organizations:
-          - *Org2
           - *Org3
-      SampleConsortiumC:
-        Organizations:
-          - *Org3
-          - *Org1
   ChannelA:
     Consortium: SampleConsortiumA
     Application:
@@ -369,17 +362,4 @@ Profiles:
       Organizations:
         - *Org1
         - *Org2
-  ChannelB:
-    Consortium: SampleConsortiumB
-    Application:
-      <<: *ApplicationDefaults
-      Organizations:
-        - *Org2
         - *Org3
-  ChannelC:
-    Consortium: SampleConsortiumC
-    Application:
-      <<: *ApplicationDefaults
-      Organizations:
-        - *Org3
-        - *Org1

@@ -15,6 +15,7 @@ echo
 ROOT_DIR=$(dirname $(readlink -f "$0"))
 EXECUTE_LOG=${ROOT_DIR}/log.txt
 ORD_DOMAIN=$(cat ${ROOT_DIR}/.env |grep '^ORDERER_DOMAIN' |awk -F'=' '{print $2}')
+ORG_PEER_JSON=$(grep '^ORG_PEER_SET' ${ROOT_DIR}/.env |awk -F'=' '{print $2}')
 CHANNEL_JSON=$(cat ${ROOT_DIR}/.env |grep '^CHANNEL_SET'|awk -F'=' '{print $2}')
 CHANNEL_SIZE=$(echo $CHANNEL_JSON |jq 'length-1')
 
@@ -56,7 +57,7 @@ setGlobals () {
     ORG=$2
 
     PEER_ORG_DOMAIN=$(cat ${ROOT_DIR}/.env |grep "^PEER_DOMAIN_${ORG}" |awk -F'=' '{print $2}')
-    CLI_PEER_TLS_DIR_NAME=${PEER_ORG_DOMAIN}/peer${PEER}.${PEER_ORG_DOMAIN}
+    CLI_PEER_TLS_DIR_NAME=peer${PEER}.${PEER_ORG_DOMAIN}
     CLI_SERVER_REMOTE_CFG=/cli/crypto/peerOrganizations/${PEER_ORG_DOMAIN}
 
     # it is must use first peer of org
@@ -65,7 +66,7 @@ setGlobals () {
     CORE_PEER_TLS_KEY_FILE=${CLI_SERVER_REMOTE_CFG}/peers/${CLI_PEER_TLS_DIR_NAME}/tls/server.key
     CORE_PEER_TLS_ROOTCERT_FILE=${CLI_SERVER_REMOTE_CFG}/peers/${CLI_PEER_TLS_DIR_NAME}/tls/ca.crt
     CORE_PEER_MSPCONFIGPATH=${CLI_SERVER_REMOTE_CFG}/users/Admin@${PEER_ORG_DOMAIN}/msp
-    CORE_PEER_ADDRESS=peer${PEER}.org${ORG}:7051
+    CORE_PEER_ADDRESS=peer${PEER}Org${ORG}:7051
 
     env |grep CORE
 }
@@ -105,11 +106,11 @@ checkOSNAvailability() {
 createChannel() {
     # create channel every org
     for index in $(seq 0 $CHANNEL_SIZE); do
-        id=$(echo $CHANNEL_JSON |jq ".[$index].id")
         ch_name=$(echo $CHANNEL_JSON |jq ".[$index].name"|sed 's/\"//g')
+        org=$(echo $CHANNEL_JSON |jq ".[$index].orgs"|sed 's/\"//g'|awk '{print $1}')
         peer=$(echo $CHANNEL_JSON |jq ".[$index].peers"|sed 's/\"//g'|awk '{print $1}')
-        setGlobals $peer $id
 
+        setGlobals $peer $org
         for ord in ${FABRIC_ORDERER_LIST}; do
             if [[ -z "$CORE_PEER_TLS_ENABLED" || "$CORE_PEER_TLS_ENABLED" = "false" ]]; then
                 peer channel create -o $ord:7050 -c $ch_name -f ./channel-artifacts/${ch_name}.tx >& ${EXECUTE_LOG}
@@ -127,27 +128,28 @@ createChannel() {
 
 updateAnchorPeers() {
     for index in $(seq 0 $CHANNEL_SIZE); do
-        id=$(echo $CHANNEL_JSON |jq ".[$index].id")
         ch_name=$(echo $CHANNEL_JSON |jq ".[$index].name"|sed 's/\"//g')
+        orgs=$(echo $CHANNEL_JSON |jq ".[$index].orgs"|sed 's/\"//g')
         peer=$(echo $CHANNEL_JSON |jq ".[$index].peers"|sed 's/\"//g'|awk '{print $1}')
-        setGlobals $peer $id
 
-        firstOrg=$(echo $CHANNEL_JSON |jq ".[$index].orgs"|sed 's/\"//g'|awk '{print $1}')
-        archorFile=${ch_name}_Org${firstOrg}-anchors.tx
+        for org in ${orgs}; do
+            setGlobals $peer $org
 
-        for ord in ${FABRIC_ORDERER_LIST}; do
-            if [[ -z "$CORE_PEER_TLS_ENABLED" || "$CORE_PEER_TLS_ENABLED" = "false" ]]; then
-                echo "peer channel update -o $ord:7050 -c $ch_name -f ./channel-artifacts/${CORE_PEER_LOCALMSPID}anchors.tx >& ${EXECUTE_LOG}"
-                peer channel update -o $ord:7050 -c $ch_name -f ./channel-artifacts/${archorFile} >& ${EXECUTE_LOG}
-            else
-                peer channel update -o $ord:7050 -c $ch_name -f ./channel-artifacts/${archorFile} --tls --cafile $ORDERER_CA >& ${EXECUTE_LOG}
-            fi
-            res=$?
-            cat ${EXECUTE_LOG}
-            verifyResult $res "Anchor peer update failed"
-            echo "===================== Anchor peers updated for org \"$CORE_PEER_LOCALMSPID\" on channel \"$ch_name\" ===================== "
-            sleep 5
-            echo
+            archorFile=${ch_name}_Org${org}-anchors.tx
+            for ord in ${FABRIC_ORDERER_LIST}; do
+                if [[ -z "$CORE_PEER_TLS_ENABLED" || "$CORE_PEER_TLS_ENABLED" = "false" ]]; then
+                    echo "peer channel update -o $ord:7050 -c $ch_name -f ./channel-artifacts/${CORE_PEER_LOCALMSPID}anchors.tx >& ${EXECUTE_LOG}"
+                    peer channel update -o $ord:7050 -c $ch_name -f ./channel-artifacts/${archorFile} >& ${EXECUTE_LOG}
+                else
+                    peer channel update -o $ord:7050 -c $ch_name -f ./channel-artifacts/${archorFile} --tls --cafile $ORDERER_CA >& ${EXECUTE_LOG}
+                fi
+                res=$?
+                cat ${EXECUTE_LOG}
+                verifyResult $res "Anchor peer update failed"
+                echo "===================== Anchor peers updated for org \"$CORE_PEER_LOCALMSPID\" on channel \"$ch_name\" ===================== "
+                sleep 5
+                echo
+            done
         done
     done
 }
@@ -159,7 +161,7 @@ joinChannelWithRetry () {
     CH_NAME=$3
 	setGlobals $PEER $ORG
 
-    PEER_CONTAINER_NAME=peer${PEER}.org${ORG}
+    PEER_CONTAINER_NAME=peer${PEER}Org${ORG}
 	peer channel join -b ${CH_NAME}.block  >& ${EXECUTE_LOG}
 	res=$?
 	cat ${EXECUTE_LOG}
@@ -185,7 +187,7 @@ joinChannel () {
         for org in ${orgs}; do
             for peer in ${peers}; do
                 joinChannelWithRetry $peer $org $ch_name
-                echo "===================== peer${peer}.org${org} joined channel \"$ch_name\" ===================== "
+                echo "===================== peer${peer}Org${org} joined channel \"$ch_name\" ===================== "
                 sleep 2
                 echo
             done
@@ -197,13 +199,14 @@ installChaincode () {
     CCNAME=$1
     CHANCODE=$2
 
-    for index in $(seq 0 $CHANNEL_SIZE); do
-        id=$(echo $CHANNEL_JSON |jq ".[$index].id")
-        peers=$(echo $CHANNEL_JSON |jq ".[$index].peers"|sed 's/\"//g')
+    orgs=$(echo $ORG_PEER_JSON |jq ".orgs"|sed 's/\"//g')
+    peers=$(echo $ORG_PEER_JSON |jq ".peers"|sed 's/\"//g')
 
+    for org in ${orgs}; do
         for peer in ${peers}; do
-            setGlobals $peer $id
-            PEER_NAME=peer${peer}.org${id}
+            setGlobals $peer $org
+
+            PEER_NAME=peer${peer}Org${org}
             echo "peer chaincode install -n ${CCNAME} -v ${VERSION} -p ${CHANCODE} >& ${EXECUTE_LOG}"
             peer chaincode install -n ${CCNAME} -v ${VERSION} -p ${CHANCODE} >& ${EXECUTE_LOG}
             res=$?
@@ -223,11 +226,13 @@ instantiateChaincode () {
         for index in $(seq 0 $CHANNEL_SIZE); do
             sleep 2
 
-            id=$(echo $CHANNEL_JSON |jq ".[$index].id")
             ch_name=$(echo $CHANNEL_JSON |jq ".[$index].name"|sed 's/\"//g')
-            peer=$(echo $CHANNEL_JSON |jq ".[$index].peers"|sed 's/\"//g'|awk '{print $2}')
+            org=$(echo $CHANNEL_JSON |jq ".[$index].orgs"|sed 's/\"//g'|awk '{print $1}')
+            peer=$(echo $CHANNEL_JSON |jq ".[$index].peers"|sed 's/\"//g'|awk '{print $1}')
 
-            setGlobals $peer $id
+            echo "org: $org, channel name: $ch_name, peer: $peer"
+            setGlobals $peer $org
+
             if [[ -z "$CORE_PEER_TLS_ENABLED" || "$CORE_PEER_TLS_ENABLED" = "false" ]]; then
                 echo "peer chaincode instantiate -o $ord:7050 -C $ch_name -n ${CCNAME} -v ${VERSION} -c ${INIT_ARGS} >& ${EXECUTE_LOG}"
                 peer chaincode instantiate -o $ord:7050 -C $ch_name -n ${CCNAME} -v ${VERSION} -c ${INIT_ARGS} >& ${EXECUTE_LOG}
@@ -236,8 +241,8 @@ instantiateChaincode () {
             fi
             res=$?
             cat ${EXECUTE_LOG}
-            verifyResult $res "Chaincode instantiation on peer${peer}.org${id} on channel \"$ch_name\" failed"
-            echo "===================== Chaincode is instantiated on peer${peer}.org${id} on channel \"$ch_name\" ===================== "
+            verifyResult $res "Chaincode instantiation on peer${peer}Org${org} on channel \"$ch_name\" failed"
+            echo "===================== Chaincode is instantiated on peer${peer}Org${org} on channel \"$ch_name\" ===================== "
             echo
         done
     done

@@ -6,30 +6,43 @@
 version: '2'
 
 services:
-  peerName:
-    container_name: peerName
+  DBName:
+    container_name: DBName
+    dns_search: .
+    image: hyperledger/fabric-couchdb:${FABRIC_BASE_VER}
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=password
+    ports:
+      - "5984:5984"
+
+  PeerName:
+    container_name: PeerName
+    dns_search: .
     extends:
       file: base/peer-base.yaml
       service: peer-base
-    network_mode: host
-    extra_hosts:
-#      - "orderer0:${orderer0IP}"
-#      - "peer0:${peer0IP}"
     environment:
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=DBName:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=password
       - CORE_CHAINCODE_LOGGING_LEVEL=DEBUG
       - CORE_CHAINCODE_LOGGING_SHIM=DEBUG
-      - CORE_PEER_ID=peerName
-      - CORE_PEER_ADDRESS=peerName:7051
-      - CORE_PEER_CHAINCODEADDRESS=peerName:7052
+      - CORE_PEER_ID=PeerName
+      - CORE_PEER_ADDRESS=PeerName:7051
+      - CORE_PEER_CHAINCODEADDRESS=PeerName:7052
       - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peerName:7051
-      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1:7051
-      - CORE_PEER_LOCALMSPID=${ORG1_PEER_LOCALMSPID}
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=PeerName:7051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=PeerName:7051
+      - CORE_PEER_LOCALMSPID=${PEER_MSPID_NAME}
     volumes:
       - /var/run/:/host/var/run/
-      - ${ORG1_PEER_SERVER_LOCAL}/peer0.yzhorg.net/msp:${ORG1_PEER_SERVER_REMOTE}/msp
-      - ${ORG1_PEER_SERVER_LOCAL}/peer0.yzhorg.net/tls:${ORG1_PEER_SERVER_REMOTE}/tls
+      - ${CRYPTO_LOCAL}/peerOrganizations/${PEER_DOMAIN_NAME}/peers/peer0.${PEER_DOMAIN_NAME}/msp:/etc/hyperledger/fabric/msp
+      - ${CRYPTO_LOCAL}/peerOrganizations/${PEER_DOMAIN_NAME}/peers/peer0.${PEER_DOMAIN_NAME}/tls:/etc/hyperledger/fabric/tls
     ports:
       - 7051:7051
       - 7052:7052
       - 7053:7053
+    depends_on:
+      - DBName
