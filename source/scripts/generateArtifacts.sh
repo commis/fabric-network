@@ -9,12 +9,13 @@ OS_ARCH=$(echo "$(uname -s|tr '[:upper:]' '[:lower:]'|sed 's/mingw64_nt.*/window
 
 export FABRIC_CFG_PATH=${SOURCE_ROOT}
 
-CH_NAME=$1
-: ${CH_NAME:="${CHANNEL_NAME}"}
-echo $CH_NAME
-
 function getToolsFullPath() {
     echo "${SOURCE_ROOT}/tools/${OS_ARCH}/$1"
+}
+
+function getPeerOrgDomain() {
+    domain=$(cat ${SOURCE_ROOT}/scripts/.env |grep "^PEER_DOMAIN_${1}"|awk -F'=' '{print $2}')
+    echo $domain
 }
 
 ## Using docker-compose template replace private key file names with constants
@@ -23,15 +24,16 @@ function replacePrivateKey () {
 
     current=`pwd`
     if [[ -f "${SOURCE_ROOT}/docker-compose-e2e.yaml" ]]; then
-        cd ${SOURCE_ROOT}/crypto-config/peerOrganizations/yzhorg.net/ca/
-        PRIV_KEY=$(ls *_sk)
-        cd $current
-        sed $OPTS "s/CA1_PRIVATE_KEY/${PRIV_KEY}/g" ${SOURCE_ROOT}/docker-compose-e2e.yaml
-
-#        cd ${SOURCE_ROOT}/crypto-config/peerOrganizations/org2.yzhorg.net/ca/
-#        PRIV_KEY=$(ls *_sk)
-#        cd $current
-#        sed $OPTS "s/CA2_PRIVATE_KEY/${PRIV_KEY}/g" ${SOURCE_ROOT}/docker-compose-e2e.yaml
+        CHANNEL_JSON=$(cat ${SOURCE_ROOT}/scripts/.env |grep '^CHANNEL_SET'|awk -F'=' '{print $2}')
+        CHANNEL_SIZE=$(echo ${CHANNEL_JSON} |jq 'length-1')
+        for index in $(seq 0 $CHANNEL_SIZE); do
+            id=$(echo $CHANNEL_JSON |jq ".[$index].id")
+            org_domain=$(getPeerOrgDomain ${id})
+            cd ${SOURCE_ROOT}/crypto-config/peerOrganizations/${org_domain}/ca/
+            PRIV_KEY=$(ls *_sk)
+            cd $current
+            sed $OPTS "s/CA${id}_PRIVATE_KEY/${PRIV_KEY}/g" ${SOURCE_ROOT}/docker-compose-e2e.yaml
+        done
     fi
 }
 
@@ -96,24 +98,31 @@ function generateChannelArtifacts() {
 	# named orderer.genesis.block or the orderer will fail to launch!
 	$CONFIGTXGEN -profile OrdererGenesis -channelID e2e-orderer-syschan -outputBlock ${SOURCE_ROOT}/channel-artifacts/genesis.block
 
-    echo
-	echo "#################################################################"
-	echo "### Generating channel configuration transaction 'channel.tx' ###"
-	echo "#################################################################"
-	$CONFIGTXGEN -profile YzhChannel -outputCreateChannelTx ${SOURCE_ROOT}/channel-artifacts/channel.tx -channelID $CH_NAME
+    CHANNEL_JSON=$(cat ${SOURCE_ROOT}/scripts/.env |grep '^CHANNEL_SET'|awk -F'=' '{print $2}')
+    CHANNEL_SIZE=$(echo $CHANNEL_JSON |jq 'length-1')
 
-    echo
-	echo "#################################################################"
-	echo "#######    Generating anchor peer update for Org1MSP   ##########"
-	echo "#################################################################"
-	$CONFIGTXGEN -profile YzhChannel -outputAnchorPeersUpdate ${SOURCE_ROOT}/channel-artifacts/YzhMSPanchors.tx -channelID $CH_NAME -asOrg YzhMSP
+    for index in $(seq 0 $CHANNEL_SIZE); do
+        profile_ch=$(echo $CHANNEL_JSON |jq ".[$index].cfg"|sed 's/\"//g')
+        ch_name=$(echo $CHANNEL_JSON |jq ".[$index].name"|sed 's/\"//g')
 
-#   echo
-#	echo "#################################################################"
-#	echo "#######    Generating anchor peer update for Org2MSP   ##########"
-#	echo "#################################################################"
-#	$CONFIGTXGEN -profile TwoOrgsChannel -outputAnchorPeersUpdate ${SOURCE_ROOT}/channel-artifacts/Org2MSPanchors.tx -channelID $CH_NAME -asOrg Org2MSP
-	echo
+        echo
+        echo "#################################################################"
+        echo "### Generating channel configuration transaction 'channel.tx' ###"
+        echo "#################################################################"
+        $CONFIGTXGEN -profile $profile_ch -outputCreateChannelTx ${SOURCE_ROOT}/channel-artifacts/${ch_name}.tx -channelID $ch_name
+
+        orgs=$(echo $CHANNEL_JSON |jq ".[$index].orgs"|sed 's/\"//g')
+        for org in ${orgs}; do
+            archorFile=${ch_name}_Org${org}-anchors.tx
+            orgMsp=$(cat ${SOURCE_ROOT}/scripts/.env |grep "^PEER_MSPID_${org}"|awk -F'=' '{print $2}')
+            echo
+            echo "#################################################################"
+            echo "#######    Generating anchor peer update for OrgMSP   ##########"
+            echo "#################################################################"
+            $CONFIGTXGEN -profile $profile_ch -outputAnchorPeersUpdate ${SOURCE_ROOT}/channel-artifacts/${archorFile} -channelID $ch_name -asOrg $orgMsp
+            echo
+        done
+	done
 }
 
 current=`pwd`

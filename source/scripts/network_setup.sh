@@ -6,7 +6,11 @@ set -e
 
 # all global environment parameter
 SOURCE_ROOT=$(cd `dirname $(readlink -f "$0")`/.. && pwd)
+REMOTE_USER=$(grep 'REMOTE_USER' ${SOURCE_ROOT}/scripts/.env |cut -d= -f2)
+REMOTE_PASSWORD=$(grep 'REMOTE_PASSWORD' ${SOURCE_ROOT}/scripts/.env |cut -d= -f2)
+REMOTE_SCRIPTDIR=/opt/fabric-data
 COMPOSE_FILE=${SOURCE_ROOT}/docker-compose-e2e.yaml
+OPENSSH_OPTS="MACs umac-64@openssh.com"
 
 function printHelp() {
     echo "Usage: ./`basename $0` [-t up|down] [-c channel-name] [-o timeout]"
@@ -21,18 +25,11 @@ function validateArgs() {
 }
 
 # parse script args
-while getopts "t:c:o" OPTION; do
+while getopts ":t:o:" OPTION; do
     case ${OPTION} in
     t)
         OP_METHOD=$OPTARG
         validateArgs
-        ;;
-    c)
-        CH_NAME=$OPTARG
-        if [[ "${OP_METHOD}" != "down" ]] && [[ -z "${CH_NAME}" ]]; then
-            echo "Option channel-name not mentioned"
-            printHelp
-        fi
         ;;
     o)
         CLI_TIMEOUT=$OPTARG
@@ -45,6 +42,22 @@ while getopts "t:c:o" OPTION; do
         printHelp
     esac
 done
+
+function sshConn() {
+    sudo sshpass -p ${REMOTE_PASSWORD} ssh -o "${OPENSSH_OPTS}" ${REMOTE_USER}@${1} "$2"
+}
+
+function copyDockercompose() {
+    echo "Copy docker compose '$2'"
+    sudo sshpass -p ${REMOTE_PASSWORD} ssh -o "${OPENSSH_OPTS}" ${REMOTE_USER}@${1} "mkdir -p ${REMOTE_SCRIPTDIR}"
+    sudo sshpass -p ${REMOTE_PASSWORD} scp -r -o "${OPENSSH_OPTS}" -c aes192-cbc $2 ${REMOTE_USER}@${1}:${REMOTE_SCRIPTDIR}
+}
+
+function copyChaincode() {
+    echo "Copy chaincode '$2'"
+    sudo sshpass -p ${REMOTE_PASSWORD} ssh -o "${OPENSSH_OPTS}" ${REMOTE_USER}@${1} "mkdir -p ${3}"
+    sudo sshpass -p ${REMOTE_PASSWORD} scp -r -o "${OPENSSH_OPTS}" -c aes192-cbc $2/* ${REMOTE_USER}@${1}:${3}
+}
 
 function clearContainers() {
     CONTAINER_IDS=$(docker ps -aq)
@@ -74,17 +87,17 @@ function updateNetworkName() {
 }
 
 function networkUp() {
-    cp ${SOURCE_ROOT}/template/single/docker-compose-e2e-template.yaml ${SOURCE_ROOT}/docker-compose-e2e.yaml
+    cp ${SOURCE_ROOT}/template/docker-compose-e2e-template.yaml ${SOURCE_ROOT}/docker-compose-e2e.yaml
 
     if [[ -d "${SOURCE_ROOT}/crypto-config" ]]; then
         echo "crypto-config directory already exists."
     else
-        source generateArtifacts.sh $CH_NAME
+        source generateArtifacts.sh
     fi
 
     cd ${SOURCE_ROOT}/scripts
     updateNetworkName ${SOURCE_ROOT}/base/peer-base.yaml
-    CHANNEL_NAME=$CH_NAME TIMEOUT=$CLI_TIMEOUT docker-compose -f $COMPOSE_FILE up -d 2>&1
+    TIMEOUT=$CLI_TIMEOUT docker-compose -f $COMPOSE_FILE up -d 2>&1
     if [[ $? -ne 0 ]]; then
       echo "ERROR !!!! Unable to pull the images "
       exit 1
@@ -128,7 +141,7 @@ function unsetEnvGopath() {
     sed ${SED_OPTS} "s|LOCAL_GOPATH=$GOPATH|LOCAL_GOPATH=\$GOPATH|g" ${SOURCE_ROOT}/scripts/.env
 }
 
-function executeSignle() {
+function executeCommand() {
     if [[ "${OP_METHOD}" != "down" ]]; then
         setEnvGopathAndCheckChaincode
     fi
@@ -149,30 +162,9 @@ function executeSignle() {
     esac
 }
 
-function executeCommand() {
-    echo "Support setup type:"
-    echo "  1 : Standalone"
-    echo "  2 : Multimachine"
-
-    read -p "Please input your select: " num
-    case "$num" in
-        *[!1-2]*)
-            executeCommand
-            ;;
-        1)
-            executeSignle
-            ;;
-        2)
-            ${SOURCE_ROOT}/scripts/network_multi.sh -t ${OP_METHOD} -c ${CH_NAME}
-            ;;
-    esac
-}
-
-
 validateArgs
-: ${CH_NAME:="yzhchannel"}
 : ${CLI_TIMEOUT:="600000"}
 chmod -R a+x ${SOURCE_ROOT}/tools >& /dev/null
 echo "root dir: ${SOURCE_ROOT}"
-echo "execute args: ${OP_METHOD} ${CH_NAME} ${CLI_TIMEOUT}"
+echo "execute args: ${OP_METHOD} ${CLI_TIMEOUT}"
 executeCommand

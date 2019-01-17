@@ -41,15 +41,15 @@ Organizations:
         Type: Signature
         Rule: "OR('OrdererMSP.admin')"
 
-  - &YzhOrg
+  - &Org1
     # DefaultOrg defines the organization which is used in the sampleconfig
     # of the fabric.git development environment
-    Name: YzhMSP
+    Name: Org1MSP
 
     # ID to load the MSP definition as
-    ID: YzhMSP
+    ID: Org1MSP
 
-    MSPDir: crypto-config/peerOrganizations/yzhorg.net/msp
+    MSPDir: crypto-config/peerOrganizations/bank1.net/msp
 
     # Policies defines the set of policies at this level of the config tree
     # For organization policies, their canonical path is usually
@@ -57,52 +57,82 @@ Organizations:
     Policies:
       Readers:
         Type: Signature
-        Rule: "OR('YzhMSP.admin', 'YzhMSP.peer', 'YzhMSP.client')"
+        Rule: "OR('Org1MSP.admin', 'Org1MSP.peer', 'Org1MSP.client')"
       Writers:
         Type: Signature
-        Rule: "OR('YzhMSP.admin', 'YzhMSP.client')"
+        Rule: "OR('Org1MSP.admin', 'Org1MSP.client')"
       Admins:
         Type: Signature
-        Rule: "OR('YzhMSP.admin')"
+        Rule: "OR('Org1MSP.admin')"
 
     AnchorPeers:
       # AnchorPeers defines the location of peers which can be used
       # for cross org gossip communication.  Note, this value is only
       # encoded in the genesis block in the Application section context
-      - Host: peer0
+      - Host: peer0.org1
         Port: 7051
 
-#    - &Org2
-#        # DefaultOrg defines the organization which is used in the sampleconfig
-#        # of the fabric.git development environment
-#        Name: Org2MSP
-#
-#        # ID to load the MSP definition as
-#        ID: Org2MSP
-#
-#        MSPDir: crypto-config/peerOrganizations/org2.example.com/msp
-#
-#        # Policies defines the set of policies at this level of the config tree
-#        # For organization policies, their canonical path is usually
-#        #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
-#        Policies:
-#            Readers:
-#                Type: Signature
-#                Rule: "OR('Org2MSP.admin', 'Org2MSP.peer', 'Org2MSP.client')"
-#            Writers:
-#                Type: Signature
-#                Rule: "OR('Org2MSP.admin', 'Org2MSP.client')"
-#            Admins:
-#                Type: Signature
-#                Rule: "OR('Org2MSP.admin')"
-#
-#        AnchorPeers:
-#            # AnchorPeers defines the location of peers which can be used
-#            # for cross org gossip communication.  Note, this value is only
-#            # encoded in the genesis block in the Application section context
-#            - Host: peer0.org2.example.com
-#              Port: 7051
+  - &Org2
+      # DefaultOrg defines the organization which is used in the sampleconfig
+      # of the fabric.git development environment
+      Name: Org2MSP
 
+      # ID to load the MSP definition as
+      ID: Org2MSP
+
+      MSPDir: crypto-config/peerOrganizations/bank2.net/msp
+
+      # Policies defines the set of policies at this level of the config tree
+      # For organization policies, their canonical path is usually
+      #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
+      Policies:
+          Readers:
+              Type: Signature
+              Rule: "OR('Org2MSP.admin', 'Org2MSP.peer', 'Org2MSP.client')"
+          Writers:
+              Type: Signature
+              Rule: "OR('Org2MSP.admin', 'Org2MSP.client')"
+          Admins:
+              Type: Signature
+              Rule: "OR('Org2MSP.admin')"
+
+      AnchorPeers:
+          # AnchorPeers defines the location of peers which can be used
+          # for cross org gossip communication.  Note, this value is only
+          # encoded in the genesis block in the Application section context
+          - Host: peer0.org2
+            Port: 7051
+
+  - &Org3
+    # DefaultOrg defines the organization which is used in the sampleconfig
+    # of the fabric.git development environment
+    Name: Org3MSP
+
+    # ID to load the MSP definition as
+    ID: Org3MSP
+
+    MSPDir: crypto-config/peerOrganizations/bank3.net/msp
+
+    # Policies defines the set of policies at this level of the config tree
+    # For organization policies, their canonical path is usually
+    #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('Org3MSP.admin', 'Org3MSP.peer', 'Org3MSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('Org3MSP.admin', 'Org3MSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('Org3MSP.admin')"
+
+    AnchorPeers:
+      # AnchorPeers defines the location of peers which can be used
+      # for cross org gossip communication.  Note, this value is only
+      # encoded in the genesis block in the Application section context
+      - Host: peer0.org3
+        Port: 7051
 
 ################################################################################
 #
@@ -320,14 +350,36 @@ Profiles:
       Organizations:
         - *OrdererOrg
     Consortiums:
-      YzhConsortium:
+      SampleConsortiumA:
         Organizations:
-          - *YzhOrg
-#          - *Org2
-  YzhChannel:
-    Consortium: YzhConsortium
+          - *Org1
+          - *Org2
+      SampleConsortiumB:
+        Organizations:
+          - *Org2
+          - *Org3
+      SampleConsortiumC:
+        Organizations:
+          - *Org3
+          - *Org1
+  ChannelA:
+    Consortium: SampleConsortiumA
     Application:
       <<: *ApplicationDefaults
       Organizations:
-        - *YzhOrg
-#        - *Org2
+        - *Org1
+        - *Org2
+  ChannelB:
+    Consortium: SampleConsortiumB
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *Org2
+        - *Org3
+  ChannelC:
+    Consortium: SampleConsortiumC
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *Org3
+        - *Org1
