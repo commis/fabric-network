@@ -52,7 +52,7 @@ function generateCerts () {
 	echo
 
 	if [[ -d "${SOURCE_ROOT}/scripts/crypto-config" ]]; then
-        sudo mv ${SOURCE_ROOT}/scripts/crypto-config ${SOURCE_ROOT}/
+        mv ${SOURCE_ROOT}/scripts/crypto-config ${SOURCE_ROOT}/
     fi
 }
 
@@ -91,11 +91,12 @@ function generateChannelArtifacts() {
     fi
 
     echo "##########################################################"
-	echo "#########  Generating Orderer Genesis block ##############"
-	echo "##########################################################"
-	# Note: For some unknown reason (at least for now) the block file can't be
-	# named orderer.genesis.block or the orderer will fail to launch!
-	$CONFIGTXGEN -profile OrdererGenesis -channelID e2e-orderer-syschan -outputBlock ${SOURCE_ROOT}/channel-artifacts/genesis.block
+    echo "#########  Generating Orderer Genesis block ##############"
+    echo "##########################################################"
+    # Note: For some unknown reason (at least for now) the block file can't be
+    # named orderer.genesis.block or the orderer will fail to launch!
+    $CONFIGTXGEN -profile OneOrgOrdererGenesis \
+      -channelID e2e-orderer-syschan -outputBlock ${SOURCE_ROOT}/channel-artifacts/genesis.block
 
     CHANNEL_JSON=$(cat ${SOURCE_ROOT}/scripts/.env |grep '^CHANNEL_SET'|awk -F'=' '{print $2}')
     CHANNEL_SIZE=$(echo $CHANNEL_JSON |jq 'length-1')
@@ -108,7 +109,8 @@ function generateChannelArtifacts() {
         echo "#################################################################"
         echo "### Generating channel configuration transaction 'channel.tx' ###"
         echo "#################################################################"
-        $CONFIGTXGEN -profile $profile_ch -outputCreateChannelTx ${SOURCE_ROOT}/channel-artifacts/${ch_name}.tx -channelID $ch_name
+        $CONFIGTXGEN -profile $profile_ch \
+          -outputCreateChannelTx ${SOURCE_ROOT}/channel-artifacts/${ch_name}.tx -channelID $ch_name
 
         orgs=$(echo $CHANNEL_JSON |jq ".[$index].orgs"|sed 's/\"//g')
         for org in ${orgs}; do
@@ -118,7 +120,8 @@ function generateChannelArtifacts() {
             echo "#################################################################"
             echo "#######    Generating anchor peer update for OrgMSP   ##########"
             echo "#################################################################"
-            $CONFIGTXGEN -profile $profile_ch -outputAnchorPeersUpdate ${SOURCE_ROOT}/channel-artifacts/${archorFile} -channelID $ch_name -asOrg $orgMsp
+            $CONFIGTXGEN -profile $profile_ch \
+              -outputAnchorPeersUpdate ${SOURCE_ROOT}/channel-artifacts/${archorFile} -channelID $ch_name -asOrg $orgMsp
             echo
         done
 	done

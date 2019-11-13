@@ -113,6 +113,7 @@ createChannel() {
         setGlobals $peer $org
         for ord in ${FABRIC_ORDERER_LIST}; do
             if [[ -z "$CORE_PEER_TLS_ENABLED" || "$CORE_PEER_TLS_ENABLED" = "false" ]]; then
+                echo "peer channel create -o $ord:7050 -c $ch_name -f ./channel-artifacts/${ch_name}.tx >& ${EXECUTE_LOG}"
                 peer channel create -o $ord:7050 -c $ch_name -f ./channel-artifacts/${ch_name}.tx >& ${EXECUTE_LOG}
             else
                 peer channel create -o $ord:7050 -c $ch_name -f ./channel-artifacts/${ch_name}.tx --tls --cafile $ORDERER_CA >& ${EXECUTE_LOG}

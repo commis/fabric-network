@@ -157,7 +157,7 @@ function buildAllPeerCompose() {
 
 function startLocalDockerContainer() {
     compose_file=$1
-    TIMEOUT=$CLI_TIMEOUT docker-compose -f $compose_file up -d 2>&1
+    TIMEOUT=$CLI_TIMEOUT docker-compose -f $compose_file up -d --remove-orphans 2>&1
     if [[ $? -ne 0 ]]; then
       echo "ERROR !!!! Unable to pull the images. ${compose_file}"
       exit 1
@@ -173,7 +173,7 @@ function startRemoteDockerContainer() {
     copyDockercompose ${remote_ip} "${SOURCE_ROOT}/base"
     copyDockercompose ${remote_ip} "${SOURCE_ROOT}/scripts/.env"
 
-    executeCmd="TIMEOUT=$CLI_TIMEOUT docker-compose -f ${REMOTE_SCRIPTDIR}/${peer_file##*/} up -d"
+    executeCmd="TIMEOUT=$CLI_TIMEOUT docker-compose -f ${REMOTE_SCRIPTDIR}/${peer_file##*/} up -d --remove-orphans"
     sshConn ${remote_ip} "cd ${REMOTE_SCRIPTDIR}; ${executeCmd}"
 }
 
@@ -228,9 +228,9 @@ function networkDown() {
     unsetEnvGopath
 
     # remove orderer block and other channel configuration transactions and certs
-    sudo rm -rf ${SOURCE_ROOT}/crypto-config ${SOURCE_ROOT}/base/crypto-config
-    sudo rm -f ${SOURCE_ROOT}/channel-artifacts/* ${SOURCE_ROOT}/docker-compose-*
-    sudo rm -f ${SOURCE_ROOT}/scripts/log.txt
+    rm -rf ${SOURCE_ROOT}/crypto-config ${SOURCE_ROOT}/base/crypto-config
+    rm -f ${SOURCE_ROOT}/channel-artifacts/* ${SOURCE_ROOT}/docker-compose-*
+    rm -f ${SOURCE_ROOT}/scripts/log.txt
 }
 
 function setEnvGopathAndCheckChaincode() {
@@ -241,11 +241,11 @@ function setEnvGopathAndCheckChaincode() {
         exit 1
     fi
 
-    sed ${SED_OPTS} "s|LOCAL_GOPATH=\$GOPATH|LOCAL_GOPATH=$GOPATH|g" ${SOURCE_ROOT}/scripts/.env
+    sed ${SED_OPTS} "s|LOCAL_GOPATH=.*|LOCAL_GOPATH=$GOPATH|g" ${SOURCE_ROOT}/scripts/.env
 }
 
 function unsetEnvGopath() {
-    sed ${SED_OPTS} "s|LOCAL_GOPATH=$GOPATH|LOCAL_GOPATH=\$GOPATH|g" ${SOURCE_ROOT}/scripts/.env
+    sed ${SED_OPTS} "s|LOCAL_GOPATH=.*|LOCAL_GOPATH=\$GOPATH|g" ${SOURCE_ROOT}/scripts/.env
 }
 
 function executeCommand() {

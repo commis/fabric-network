@@ -1,5 +1,9 @@
 ### IntelliJ IDEA ###
 .idea/
 *.iml
+docker-compose-*.yaml
 
+channel-artifacts/*.tx
+channel-artifacts/*.block
 crypto-config
+scripts/*.txt

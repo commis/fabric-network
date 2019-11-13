@@ -27,6 +27,8 @@ Organizations:
     # MSPDir is the filesystem path which contains the MSP configuration
     MSPDir: crypto-config/ordererOrganizations/orderer.net/msp
 
+    AdminPrincipal: Role.ADMIN
+
     # Policies defines the set of policies at this level of the config tree
     # For organization policies, their canonical path is usually
     #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
@@ -51,6 +53,8 @@ Organizations:
 
     MSPDir: crypto-config/peerOrganizations/energy.net/msp
 
+    AdminPrincipal: Role.ADMIN
+
     # Policies defines the set of policies at this level of the config tree
     # For organization policies, their canonical path is usually
     #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
@@ -72,67 +76,67 @@ Organizations:
       - Host: peer0Org1
         Port: 7051
 
-  - &Org2
-      # DefaultOrg defines the organization which is used in the sampleconfig
-      # of the fabric.git development environment
-      Name: Org2MSP
+#  - &Org2
+#      # DefaultOrg defines the organization which is used in the sampleconfig
+#      # of the fabric.git development environment
+#      Name: Org2MSP
+#
+#      # ID to load the MSP definition as
+#      ID: Org2MSP
+#
+#      MSPDir: crypto-config/peerOrganizations/bank2.net/msp
+#
+#      # Policies defines the set of policies at this level of the config tree
+#      # For organization policies, their canonical path is usually
+#      #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
+#      Policies:
+#          Readers:
+#              Type: Signature
+#              Rule: "OR('Org2MSP.admin', 'Org2MSP.peer', 'Org2MSP.client')"
+#          Writers:
+#              Type: Signature
+#              Rule: "OR('Org2MSP.admin', 'Org2MSP.client')"
+#          Admins:
+#              Type: Signature
+#              Rule: "OR('Org2MSP.admin')"
+#
+#      AnchorPeers:
+#          # AnchorPeers defines the location of peers which can be used
+#          # for cross org gossip communication.  Note, this value is only
+#          # encoded in the genesis block in the Application section context
+#          - Host: peer0Org2
+#            Port: 7051
 
-      # ID to load the MSP definition as
-      ID: Org2MSP
-
-      MSPDir: crypto-config/peerOrganizations/bank2.net/msp
-
-      # Policies defines the set of policies at this level of the config tree
-      # For organization policies, their canonical path is usually
-      #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
-      Policies:
-          Readers:
-              Type: Signature
-              Rule: "OR('Org2MSP.admin', 'Org2MSP.peer', 'Org2MSP.client')"
-          Writers:
-              Type: Signature
-              Rule: "OR('Org2MSP.admin', 'Org2MSP.client')"
-          Admins:
-              Type: Signature
-              Rule: "OR('Org2MSP.admin')"
-
-      AnchorPeers:
-          # AnchorPeers defines the location of peers which can be used
-          # for cross org gossip communication.  Note, this value is only
-          # encoded in the genesis block in the Application section context
-          - Host: peer0Org2
-            Port: 7051
-
-  - &Org3
-    # DefaultOrg defines the organization which is used in the sampleconfig
-    # of the fabric.git development environment
-    Name: Org3MSP
-
-    # ID to load the MSP definition as
-    ID: Org3MSP
-
-    MSPDir: crypto-config/peerOrganizations/bank3.net/msp
-
-    # Policies defines the set of policies at this level of the config tree
-    # For organization policies, their canonical path is usually
-    #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
-    Policies:
-      Readers:
-        Type: Signature
-        Rule: "OR('Org3MSP.admin', 'Org3MSP.peer', 'Org3MSP.client')"
-      Writers:
-        Type: Signature
-        Rule: "OR('Org3MSP.admin', 'Org3MSP.client')"
-      Admins:
-        Type: Signature
-        Rule: "OR('Org3MSP.admin')"
-
-    AnchorPeers:
-      # AnchorPeers defines the location of peers which can be used
-      # for cross org gossip communication.  Note, this value is only
-      # encoded in the genesis block in the Application section context
-      - Host: peer0Org3
-        Port: 7051
+#  - &Org3
+#    # DefaultOrg defines the organization which is used in the sampleconfig
+#    # of the fabric.git development environment
+#    Name: Org3MSP
+#
+#    # ID to load the MSP definition as
+#    ID: Org3MSP
+#
+#    MSPDir: crypto-config/peerOrganizations/bank3.net/msp
+#
+#    # Policies defines the set of policies at this level of the config tree
+#    # For organization policies, their canonical path is usually
+#    #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
+#    Policies:
+#      Readers:
+#        Type: Signature
+#        Rule: "OR('Org3MSP.admin', 'Org3MSP.peer', 'Org3MSP.client')"
+#      Writers:
+#        Type: Signature
+#        Rule: "OR('Org3MSP.admin', 'Org3MSP.client')"
+#      Admins:
+#        Type: Signature
+#        Rule: "OR('Org3MSP.admin')"
+#
+#    AnchorPeers:
+#      # AnchorPeers defines the location of peers which can be used
+#      # for cross org gossip communication.  Note, this value is only
+#      # encoded in the genesis block in the Application section context
+#      - Host: peer0Org3
+#        Port: 7051
 
 ################################################################################
 #
@@ -262,15 +266,15 @@ Orderer: &OrdererDefaults
     # max bytes will result in a batch larger than preferred max bytes.
     PreferredMaxBytes: 512 KB
 
-  Kafka:
-    # Brokers: A list of Kafka brokers to which the orderer connects. Edit
-    # this list to identify the brokers of the ordering service.
-    # NOTE: Use IP:port notation.
-    Brokers:
-      - kafka0:9092
-      - kafka1:9092
-      - kafka2:9092
-      - kafka3:9092
+  #  Kafka:
+  #    # Brokers: A list of Kafka brokers to which the orderer connects. Edit
+  #    # this list to identify the brokers of the ordering service.
+  #    # NOTE: Use IP:port notation.
+  #    Brokers:
+  #      - kafka0:9092
+  #      - kafka1:9092
+  #      - kafka2:9092
+  #      - kafka3:9092
 
   # Organizations is the list of orgs which are defined as participants on
   # the orderer side of the network
@@ -289,8 +293,8 @@ Orderer: &OrdererDefaults
     Admins:
       Type: ImplicitMeta
       Rule: "MAJORITY Admins"
-    # BlockValidation specifies what signatures must be included in the block
-    # from the orderer for the peer to validate it.
+  # BlockValidation specifies what signatures must be included in the block
+  # from the orderer for the peer to validate it.
     BlockValidation:
       Type: ImplicitMeta
       Rule: "ANY Writers"
@@ -327,7 +331,6 @@ Channel: &ChannelDefaults
       Type: ImplicitMeta
       Rule: "MAJORITY Admins"
 
-
   # Capabilities describes the channel level capabilities, see the
   # dedicated Capabilities section elsewhere in this file for a full
   # description
@@ -343,23 +346,18 @@ Channel: &ChannelDefaults
 #
 ################################################################################
 Profiles:
-  OrdererGenesis:
-    <<: *ChannelDefaults
+  OneOrgOrdererGenesis:
     Orderer:
       <<: *OrdererDefaults
       Organizations:
         - *OrdererOrg
     Consortiums:
-      SampleConsortiumA:
+      SampleConsortium:
         Organizations:
           - *Org1
-          - *Org2
-          - *Org3
-  ChannelA:
-    Consortium: SampleConsortiumA
+  OneOrgChannel:
+    Consortium: SampleConsortium
     Application:
       <<: *ApplicationDefaults
       Organizations:
         - *Org1
-        - *Org2
-        - *Org3
