@@ -12,10 +12,10 @@ OrdererOrgs:
   # ---------------------------------------------------------------------------
   - Name: Orderer
     Domain: orderer.net
-    CA:
-        Country: US
-        Province: California
-        Locality: San Francisco
+#    CA:
+#        Country: US
+#        Province: California
+#        Locality: San Francisco
     # ---------------------------------------------------------------------------
     # "Specs" - See PeerOrgs below for complete description
     # ---------------------------------------------------------------------------
@@ -30,11 +30,11 @@ PeerOrgs:
   # ---------------------------------------------------------------------------
   - Name: Org1
     Domain: energy.net
-    EnableNodeOUs: true
-    CA:
-        Country: US
-        Province: California
-        Locality: San Francisco
+#    EnableNodeOUs: true
+#    CA:
+#        Country: US
+#        Province: California
+#        Locality: San Francisco
     # ---------------------------------------------------------------------------
     # "Specs"
     # ---------------------------------------------------------------------------

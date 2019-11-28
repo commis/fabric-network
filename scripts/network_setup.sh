@@ -101,10 +101,11 @@ function removeUnwantedImages() {
 
 function updateNetworkName() {
     CONFIG_FILE=$1
+    NETWORK_NAME=$2
     ENV_KEY_NAME=CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE
 
-    NETWORK_NAME_NEW=${ENV_KEY_NAME}=source_default
-    NETWORK_NAME_OLD=${ENV_KEY_NAME}=$(cat $CONFIG_FILE |grep $ENV_KEY_NAME |awk -F= '{print $2}')
+    NETWORK_NAME_OLD=${ENV_KEY_NAME}=.*$
+    NETWORK_NAME_NEW=${ENV_KEY_NAME}=${NETWORK_NAME}
     sed ${SED_OPTS} "s/${NETWORK_NAME_OLD}/${NETWORK_NAME_NEW}/g" ${CONFIG_FILE}
 }
 
@@ -157,7 +158,7 @@ function buildAllPeerCompose() {
 
 function startLocalDockerContainer() {
     compose_file=$1
-    TIMEOUT=$CLI_TIMEOUT docker-compose -f $compose_file up -d --remove-orphans 2>&1
+    TIMEOUT=$CLI_TIMEOUT docker-compose -f $compose_file up -d 2>&1
     if [[ $? -ne 0 ]]; then
       echo "ERROR !!!! Unable to pull the images. ${compose_file}"
       exit 1
@@ -173,7 +174,7 @@ function startRemoteDockerContainer() {
     copyDockercompose ${remote_ip} "${SOURCE_ROOT}/base"
     copyDockercompose ${remote_ip} "${SOURCE_ROOT}/scripts/.env"
 
-    executeCmd="TIMEOUT=$CLI_TIMEOUT docker-compose -f ${REMOTE_SCRIPTDIR}/${peer_file##*/} up -d --remove-orphans"
+    executeCmd="TIMEOUT=$CLI_TIMEOUT docker-compose -f ${REMOTE_SCRIPTDIR}/${peer_file##*/} up -d"
     sshConn ${remote_ip} "cd ${REMOTE_SCRIPTDIR}; ${executeCmd}"
 }
 
@@ -205,14 +206,14 @@ function networkUp() {
         source generateArtifacts.sh
     fi
 
-    cd ${SOURCE_ROOT}/scripts
-    updateNetworkName ${SOURCE_ROOT}/base/peer-base.yaml
+    updateNetworkName ${SOURCE_ROOT}/base/peer-base.yaml "${PWD##*/}_default"
 
+    cd ${SOURCE_ROOT}/scripts
     buildAllPeerCompose
     startAllPeerNode
 
     startLocalDockerContainer $COMPOSE_FILE
-    docker logs -f cli
+    docker logs -f cli &
 }
 
 function networkDown() {
@@ -226,6 +227,7 @@ function networkDown() {
     removeUnwantedImages
 
     unsetEnvGopath
+    updateNetworkName ${SOURCE_ROOT}/base/peer-base.yaml 'source_default'
 
     # remove orderer block and other channel configuration transactions and certs
     rm -rf ${SOURCE_ROOT}/crypto-config ${SOURCE_ROOT}/base/crypto-config
