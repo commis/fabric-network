@@ -68,7 +68,8 @@ setGlobals() {
     CORE_PEER_MSPCONFIGPATH=${CLI_SERVER_REMOTE_CFG}/users/Admin@${PEER_ORG_DOMAIN}/msp
     CORE_PEER_ADDRESS=peer${PEER}Org${ORG}:7051
 
-    env | grep CORE
+    # 系统环境变量设置
+    # env | grep CORE
 }
 
 checkOSNAvailability() {
@@ -112,9 +113,10 @@ createChannel() {
         setGlobals $peer $org
         for ord in ${FABRIC_ORDERER_LIST}; do
             if [[ -z "$CORE_PEER_TLS_ENABLED" || "$CORE_PEER_TLS_ENABLED" == "false" ]]; then
-                # echo "peer channel create -o $ord:7050 -c $ch_name -f ./channel-artifacts/${ch_name}.tx >& ${EXECUTE_LOG}"
+                echo "peer channel create -o $ord:7050 -c $ch_name -f ./channel-artifacts/${ch_name}.tx >& ${EXECUTE_LOG}"
                 peer channel create -o $ord:7050 -c $ch_name -f ./channel-artifacts/${ch_name}.tx >&${EXECUTE_LOG}
             else
+                echo "peer channel create -o $ord:7050 -c $ch_name -f ./channel-artifacts/${ch_name}.tx --tls --cafile $ORDERER_CA >&${EXECUTE_LOG}"
                 peer channel create -o $ord:7050 -c $ch_name -f ./channel-artifacts/${ch_name}.tx --tls --cafile $ORDERER_CA >&${EXECUTE_LOG}
             fi
             res=$?
@@ -141,6 +143,7 @@ updateAnchorPeers() {
                     echo "peer channel update -o $ord:7050 -c $ch_name -f ./channel-artifacts/${CORE_PEER_LOCALMSPID}anchors.tx >& ${EXECUTE_LOG}"
                     peer channel update -o $ord:7050 -c $ch_name -f ./channel-artifacts/${archorFile} >&${EXECUTE_LOG}
                 else
+                    echo "peer channel update -o $ord:7050 -c $ch_name -f ./channel-artifacts/${archorFile} --tls --cafile $ORDERER_CA >&${EXECUTE_LOG}"
                     peer channel update -o $ord:7050 -c $ch_name -f ./channel-artifacts/${archorFile} --tls --cafile $ORDERER_CA >&${EXECUTE_LOG}
                 fi
                 res=$?
@@ -237,6 +240,7 @@ instantiateChaincode() {
                 echo "peer chaincode instantiate -o $ord:7050 -C $ch_name -n ${CCNAME} -v ${VERSION} -c ${INIT_ARGS} >& ${EXECUTE_LOG}"
                 peer chaincode instantiate -o $ord:7050 -C $ch_name -n ${CCNAME} -v ${VERSION} -c ${INIT_ARGS} >&${EXECUTE_LOG}
             else
+                echo "peer chaincode instantiate -o $ord:7050 --tls --cafile $ORDERER_CA -C $ch_name -n ${CCNAME} -v ${VERSION} -c ${INIT_ARGS} >&${EXECUTE_LOG}"
                 peer chaincode instantiate -o $ord:7050 --tls --cafile $ORDERER_CA -C $ch_name -n ${CCNAME} -v ${VERSION} -c ${INIT_ARGS} >&${EXECUTE_LOG}
             fi
             res=$?
