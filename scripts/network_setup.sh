@@ -3,20 +3,20 @@
 set -e
 
 # all global environment parameter
-SOURCE_ROOT=$(cd `dirname $(readlink -f "$0")`/.. && pwd)
-REMOTE_USER=$(grep 'REMOTE_USER' ${SOURCE_ROOT}/scripts/.env |cut -d= -f2)
-REMOTE_PASSWORD=$(grep 'REMOTE_PASSWORD' ${SOURCE_ROOT}/scripts/.env |cut -d= -f2)
+SOURCE_ROOT=$(cd $(dirname $(readlink -f "$0"))/.. && pwd)
+REMOTE_USER=$(grep 'REMOTE_USER' ${SOURCE_ROOT}/scripts/.env | cut -d= -f2)
+REMOTE_PASSWORD=$(grep 'REMOTE_PASSWORD' ${SOURCE_ROOT}/scripts/.env | cut -d= -f2)
 REMOTE_SCRIPTDIR=/opt/fabric-network
 COMPOSE_FILE=${SOURCE_ROOT}/docker-compose-cli.yaml
 OPENSSH_OPTS="MACs umac-64@openssh.com"
-ORG_PEER_JSON=$(grep '^ORG_PEER_SET' ${SOURCE_ROOT}/scripts/.env |awk -F'=' '{print $2}')
-ADDR_NODE_CLI=$(grep '^ADDR_CLI' ${SOURCE_ROOT}/scripts/.env |awk -F'=' '{print $2}')
+ORG_PEER_JSON=$(grep '^ORG_PEER_SET' ${SOURCE_ROOT}/scripts/.env | awk -F'=' '{print $2}')
+ADDR_NODE_CLI=$(grep '^ADDR_CLI' ${SOURCE_ROOT}/scripts/.env | awk -F'=' '{print $2}')
 
 [[ "$(uname -s | grep Darwin)" == "Darwin" ]] && SED_OPTS="-it" || SED_OPTS="-i"
 [[ "$(uname -s | grep Darwin)" == "Darwin" ]] && XARGS_OPTS="-t" || XARGS_OPTS="-ti"
 
 function printHelp() {
-    echo "Usage: ./`basename $0` [-t up|down] [-c channel-name] [-o timeout]"
+    echo "Usage: ./$(basename $0) [-t up|down] [-c channel-name] [-o timeout]"
     exit 1
 }
 
@@ -43,6 +43,7 @@ while getopts ":t:o:" OPTION; do
         ;;
     ?)
         printHelp
+        ;;
     esac
 done
 
@@ -64,7 +65,7 @@ function copyChaincode() {
 
 function clearLocalContainers() {
     CONTAINER_IDS=$(docker ps -aq)
-    if [[ -z "$CONTAINER_IDS" || "$CONTAINER_IDS" = " " ]]; then
+    if [[ -z "$CONTAINER_IDS" || "$CONTAINER_IDS" == " " ]]; then
         echo "---- No containers available for deletion ----"
     else
         docker rm -f $CONTAINER_IDS
@@ -73,9 +74,9 @@ function clearLocalContainers() {
 }
 
 function clearRemoteContainers() {
-    orgs=$(echo $ORG_PEER_JSON |jq ".orgs"|sed 's/\"//g')
+    orgs=$(echo $ORG_PEER_JSON | jq ".orgs" | sed 's/\"//g')
     for org in ${orgs}; do
-        remote_addr=$(grep "^ADDR_ORG_${org}" ${SOURCE_ROOT}/scripts/.env |awk -F'=' '{print $2}')
+        remote_addr=$(grep "^ADDR_ORG_${org}" ${SOURCE_ROOT}/scripts/.env | awk -F'=' '{print $2}')
         if [[ "$remote_addr" != "$ADDR_NODE_CLI" ]]; then
             executeCmd="""
                 if [[ -d ${REMOTE_SCRIPTDIR} ]]; then
@@ -92,7 +93,7 @@ function clearRemoteContainers() {
 
 function removeUnwantedImages() {
     DOCKER_IMAGE_IDS=$(docker images | grep "dev\|none\|test-vp\|peer[0-9]-" | awk '{print $3}')
-    if [[ -z "$DOCKER_IMAGE_IDS" || "$DOCKER_IMAGE_IDS" = " " ]]; then
+    if [[ -z "$DOCKER_IMAGE_IDS" || "$DOCKER_IMAGE_IDS" == " " ]]; then
         echo "---- No images available for deletion ----"
     else
         docker rmi -f $DOCKER_IMAGE_IDS
@@ -112,10 +113,10 @@ function updateNetworkName() {
 function replacePort() {
     compose_file=$1
     number=$2
-    array=(`echo $3|sed 's/:/ /g'`)
+    array=($(echo $3 | sed 's/:/ /g'))
 
     first=${array[0]}
-    total=$(echo $first |awk '{print length($0)-1}')
+    total=$(echo $first | awk '{print length($0)-1}')
     realPort=$(expr ${first:0:1} + $number)${first:1:$total}:${array[1]}
 
     sed $SED_OPTS "s/${3}/${realPort}/g" $compose_file
@@ -132,8 +133,8 @@ function replacePeerComposeParameter() {
     sed $SED_OPTS "s/PEER_MSPID_NAME/PEER_MSPID_${org_id}/g" $compose_file
     sed $SED_OPTS "s/PEER_DOMAIN_NAME/PEER_DOMAIN_${org_id}/g" $compose_file
 
-    addr_peer=$(grep "^ADDR_ORG_${org_id}" ${SOURCE_ROOT}/scripts/.env |awk -F'=' '{print $2}')
-    if [[ "$addr_peer" = "$ADDR_NODE_CLI" ]]; then
+    addr_peer=$(grep "^ADDR_ORG_${org_id}" ${SOURCE_ROOT}/scripts/.env | awk -F'=' '{print $2}')
+    if [[ "$addr_peer" == "$ADDR_NODE_CLI" ]]; then
         replacePort $compose_file $counter "5984:5984"
         replacePort $compose_file $counter "7051:7051"
         replacePort $compose_file $counter "7052:7052"
@@ -142,8 +143,8 @@ function replacePeerComposeParameter() {
 }
 
 function buildAllPeerCompose() {
-    orgs=$(echo $ORG_PEER_JSON |jq ".orgs"|sed 's/\"//g')
-    peers=$(echo $ORG_PEER_JSON |jq ".peers"|sed 's/\"//g')
+    orgs=$(echo $ORG_PEER_JSON | jq ".orgs" | sed 's/\"//g')
+    peers=$(echo $ORG_PEER_JSON | jq ".peers" | sed 's/\"//g')
 
     counter=0
     for org in ${orgs}; do
@@ -151,7 +152,7 @@ function buildAllPeerCompose() {
             peer_file=${SOURCE_ROOT}//docker-compose-org${org}_peer${peer}.yaml
             cp ${SOURCE_ROOT}/template/docker-compose-peer-template.yaml ${peer_file}
             replacePeerComposeParameter ${peer_file} ${org} $peer $counter
-            counter=`expr ${counter} + 1`
+            counter=$(expr ${counter} + 1)
         done
     done
 }
@@ -160,8 +161,8 @@ function startLocalDockerContainer() {
     compose_file=$1
     TIMEOUT=$CLI_TIMEOUT docker-compose -f $compose_file up -d 2>&1
     if [[ $? -ne 0 ]]; then
-      echo "ERROR !!!! Unable to pull the images. ${compose_file}"
-      exit 1
+        echo "ERROR !!!! Unable to pull the images. ${compose_file}"
+        exit 1
     fi
 }
 
@@ -169,7 +170,7 @@ function startRemoteDockerContainer() {
     peer_file=$1
     remote_ip=$2
 
-#    copyChaincode ${remote_ip} "${}" "${}"
+    #    copyChaincode ${remote_ip} "${}" "${}"
     copyDockercompose ${remote_ip} "${peer_file}"
     copyDockercompose ${remote_ip} "${SOURCE_ROOT}/base"
     copyDockercompose ${remote_ip} "${SOURCE_ROOT}/scripts/.env"
@@ -179,15 +180,15 @@ function startRemoteDockerContainer() {
 }
 
 function startAllPeerNode() {
-    orgs=$(echo $ORG_PEER_JSON |jq ".orgs"|sed 's/\"//g')
-    peers=$(echo $ORG_PEER_JSON |jq ".peers"|sed 's/\"//g')
+    orgs=$(echo $ORG_PEER_JSON | jq ".orgs" | sed 's/\"//g')
+    peers=$(echo $ORG_PEER_JSON | jq ".peers" | sed 's/\"//g')
 
     counter=0
     for org in ${orgs}; do
         for peer in ${peers}; do
             peer_file=${SOURCE_ROOT}/docker-compose-org${org}_peer${peer}.yaml
 
-            addr_peer=$(grep "^ADDR_ORG_${org}" ${SOURCE_ROOT}/scripts/.env |awk -F'=' '{print $2}')
+            addr_peer=$(grep "^ADDR_ORG_${org}" ${SOURCE_ROOT}/scripts/.env | awk -F'=' '{print $2}')
             if [[ "$addr_peer" != "$ADDR_NODE_CLI" ]]; then
                 startRemoteDockerContainer $peer_file $addr_peer
             else
@@ -202,9 +203,8 @@ function networkUp() {
 
     if [[ -d "${SOURCE_ROOT}/crypto-config" ]]; then
         echo "crypto-config directory already exists."
-    else
-        source generateArtifacts.sh
     fi
+    source generateArtifacts.sh
 
     updateNetworkName ${SOURCE_ROOT}/base/peer-base.yaml "${PWD##*/}_default"
 
@@ -236,7 +236,7 @@ function networkDown() {
 }
 
 function setEnvGopathAndCheckChaincode() {
-    GO_CHAINCODE=${GOPATH}/src/$(grep '^CHAINCODE_INSTALL' ${SOURCE_ROOT}/scripts/.env |awk -F'=' '{print $2}')
+    GO_CHAINCODE=${GOPATH}/src/$(grep '^CHAINCODE_INSTALL' ${SOURCE_ROOT}/scripts/.env | awk -F'=' '{print $2}')
     echo "chaincode path: ${GO_CHAINCODE}"
     if [[ ! -d "${GO_CHAINCODE}" ]]; then
         echo "please modify CHAINCODE_INSTALL in ${SOURCE_ROOT}/scripts/.env"
@@ -254,26 +254,27 @@ function executeCommand() {
     if [[ "${OP_METHOD}" != "down" ]]; then
         setEnvGopathAndCheckChaincode
     fi
-    
+
     case ${OP_METHOD} in
-        "up")
-            networkUp
-            ;;
-        "down")
-            networkDown
-            ;;
-        "restart")
-            networkDown
-            networkUp
-            ;;
-        ?)
-            printHelp
+    "up")
+        networkUp
+        ;;
+    "down")
+        networkDown
+        ;;
+    "restart")
+        networkDown
+        networkUp
+        ;;
+    ?)
+        printHelp
+        ;;
     esac
 }
 
 validateArgs
 : ${CLI_TIMEOUT:="600000"}
-chmod -R a+x ${SOURCE_ROOT}/tools >& /dev/null
+chmod -R a+x ${SOURCE_ROOT}/tools >&/dev/null
 echo "root dir: ${SOURCE_ROOT}"
 echo "execute args: ${OP_METHOD} ${CLI_TIMEOUT}"
 executeCommand
