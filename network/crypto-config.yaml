@@ -14,10 +14,6 @@ OrdererOrgs:
     Domain: example.com
     Specs:
       - Hostname: orderer
-      - Hostname: orderer2
-      - Hostname: orderer3
-      - Hostname: orderer4
-      - Hostname: orderer5
 
 # ---------------------------------------------------------------------------
 # "PeerOrgs" - Definition of organizations managing peer nodes
@@ -29,12 +25,6 @@ PeerOrgs:
   - Name: Org1
     Domain: org1.example.com
     EnableNodeOUs: true
-    CA:
-      CommonName: ca.org1.example.com
-      SANS:
-        - 127.0.0.1
-        - localhost
-        - ca.org1.example.com
     Template:
       Count: 2
     Users:
@@ -45,12 +35,6 @@ PeerOrgs:
   - Name: Org2
     Domain: org2.example.com
     EnableNodeOUs: true
-    CA:
-      CommonName: ca.org2.example.com
-      SANS:
-        - 127.0.0.1
-        - localhost
-        - ca.org2.example.com
     Template:
       Count: 2
     Users:
