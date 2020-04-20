@@ -14,10 +14,20 @@ OrdererOrgs:
     Domain: example.com
     Specs:
       - Hostname: orderer
+        SANS:
+          - "127.0.0.1"
       - Hostname: orderer2
+        SANS:
+          - "127.0.0.1"
       - Hostname: orderer3
+        SANS:
+          - "127.0.0.1"
       - Hostname: orderer4
+        SANS:
+          - "127.0.0.1"
       - Hostname: orderer5
+        SANS:
+          - "127.0.0.1"
 
 # ---------------------------------------------------------------------------
 # "PeerOrgs" - Definition of organizations managing peer nodes
@@ -30,11 +40,8 @@ PeerOrgs:
     Domain: org1.example.com
     EnableNodeOUs: true
     CA:
-      CommonName: ca.org1.example.com
       SANS:
-        - 127.0.0.1
-        - localhost
-        - ca.org1.example.com
+        - "127.0.0.1"
     Template:
       Count: 2
     Users:
@@ -46,11 +53,8 @@ PeerOrgs:
     Domain: org2.example.com
     EnableNodeOUs: true
     CA:
-      CommonName: ca.org2.example.com
       SANS:
-        - 127.0.0.1
-        - localhost
-        - ca.org2.example.com
+        - "127.0.0.1"
     Template:
       Count: 2
     Users:
