@@ -14,6 +14,8 @@ OrdererOrgs:
     Domain: example.com
     Specs:
       - Hostname: orderer
+        SANS:
+          - "127.0.0.1"
 
 # ---------------------------------------------------------------------------
 # "PeerOrgs" - Definition of organizations managing peer nodes
@@ -27,6 +29,8 @@ PeerOrgs:
     EnableNodeOUs: true
     Template:
       Count: 2
+      SANS:
+        - "127.0.0.1"
     Users:
       Count: 1
   # ---------------------------------------------------------------------------
@@ -37,5 +41,7 @@ PeerOrgs:
     EnableNodeOUs: true
     Template:
       Count: 2
+      SANS:
+        - "127.0.0.1"
     Users:
       Count: 1
