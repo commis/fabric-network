@@ -151,13 +151,13 @@ function getPrivateKeyFile() {
     org=$1
     dir=$2
     cd crypto-config/peerOrganizations/${org}.example.com/${dir} || exit 1
-    if [ -f priv_sk ]; then
-        openssl x509 -in $(ls *.pem) -noout -text >pem.txt
-        line=$(sed -n '/X509v3 Subject Key Identifier/=' pem.txt)
-        data=$(sed -n "$(($line + 1))p" pem.txt | sed 's/[: ]//g' | tr 'A-Z' 'a-z')
-        mv priv_sk ${data}_sk
-        rm -rf pem.txt
-    fi
+    #if [ -f priv_sk ]; then
+    #    openssl x509 -in $(ls *.pem) -noout -text >pem.txt
+    #    line=$(sed -n '/X509v3 Subject Key Identifier/=' pem.txt)
+    #    data=$(sed -n "$(($line + 1))p" pem.txt | sed 's/[: ]//g' | tr 'A-Z' 'a-z')
+    #    mv priv_sk ${data}_sk
+    #    rm -rf pem.txt
+    #fi
     ls *_sk
 }
 
