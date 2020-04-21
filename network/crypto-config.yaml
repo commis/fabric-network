@@ -27,10 +27,11 @@ PeerOrgs:
   - Name: Org1
     Domain: org1.example.com
     EnableNodeOUs: true
-    Template:
-      Count: 2
+    CA:
       SANS:
         - "127.0.0.1"
+    Template:
+      Count: 2
     Users:
       Count: 1
   # ---------------------------------------------------------------------------
@@ -39,9 +40,10 @@ PeerOrgs:
   - Name: Org2
     Domain: org2.example.com
     EnableNodeOUs: true
-    Template:
-      Count: 2
+    CA:
       SANS:
         - "127.0.0.1"
+    Template:
+      Count: 2
     Users:
       Count: 1
