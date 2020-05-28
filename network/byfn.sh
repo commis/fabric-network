@@ -180,10 +180,8 @@ function networkUp() {
         export BYFN_CA2_PRIVATE_KEY=$(getPrivateKeyFile org2 ca)
         export BYFN_CA2_TLS_PRIVATE_KEY=$(getPrivateKeyFile org2 tlsca)
     fi
-    if [ "${CONSENSUS_TYPE}" == "kafka" ]; then
-        COMPOSE_FILES="${COMPOSE_FILES} -f ${COMPOSE_FILE_KAFKA}"
-    elif [ "${CONSENSUS_TYPE}" == "etcdraft" ]; then
-        COMPOSE_FILES="${COMPOSE_FILES} -f ${COMPOSE_FILE_RAFT2}"
+    if [ "${CONSENSUS_TYPE}" == "etcdraft" ]; then
+        COMPOSE_FILES="${COMPOSE_FILES} -f ${COMPOSE_FILE_RAFT}"
     fi
     if [ "${IF_COUCHDB}" == "couchdb" ]; then
         COMPOSE_FILES="${COMPOSE_FILES} -f ${COMPOSE_FILE_COUCH}"
@@ -240,10 +238,8 @@ function upgradeNetwork() {
             export BYFN_CA2_PRIVATE_KEY=$(getPrivateKeyFile org2 ca)
             export BYFN_CA2_TLS_PRIVATE_KEY=$(getPrivateKeyFile org2 tlsca)
         fi
-        if [ "${CONSENSUS_TYPE}" == "kafka" ]; then
-            COMPOSE_FILES="${COMPOSE_FILES} -f ${COMPOSE_FILE_KAFKA}"
-        elif [ "${CONSENSUS_TYPE}" == "etcdraft" ]; then
-            COMPOSE_FILES="${COMPOSE_FILES} -f ${COMPOSE_FILE_RAFT2}"
+        if [ "${CONSENSUS_TYPE}" == "etcdraft" ]; then
+            COMPOSE_FILES="${COMPOSE_FILES} -f ${COMPOSE_FILE_RAFT}"
         fi
         if [ "${IF_COUCHDB}" == "couchdb" ]; then
             COMPOSE_FILES="${COMPOSE_FILES} -f ${COMPOSE_FILE_COUCH}"
@@ -294,13 +290,16 @@ function networkDown() {
     # stop containers also in addition to org1 and org2
     # stop kafka and zookeeper containers in case we're running with kafka consensus-type
     #  docker-compose -f $COMPOSE_FILE -f $COMPOSE_FILE_COUCH -f $COMPOSE_FILE_KAFKA -f $COMPOSE_FILE_RAFT2 -f $COMPOSE_FILE_CA -f $COMPOSE_FILE_ORG3 down --volumes --remove-orphans
-    docker-compose -f $COMPOSE_FILE -f $COMPOSE_FILE_CA down --volumes --remove-orphans
+    docker-compose -f $COMPOSE_FILE -f $COMPOSE_FILE_RAFT -f $COMPOSE_FILE_CA down --volumes --remove-orphans
 
     # Don't remove the generated artifacts -- note, the ledgers are always removed
     if [ "$MODE" != "restart" ]; then
         # Bring down the network, deleting the volumes
         #Delete any ledger backups
-        docker run -v $PWD:/tmp/first-network --rm hyperledger/fabric-tools:$IMAGETAG rm -Rf /tmp/first-network/ledgers-backup
+        tools_ps=$(docker ps | grep 'fabric-tools' | awk '{print $1}')
+        if [ "${tools_ps}" != "" ]; then
+            docker run -v $PWD:/tmp/first-network --rm hyperledger/fabric-tools:$IMAGETAG rm -Rf /tmp/first-network/ledgers-backup
+        fi
         #Cleanup the chaincode containers
         clearContainers
         #Cleanup images
@@ -445,10 +444,8 @@ function generateChannelArtifacts() {
     set -x
     if [ "$CONSENSUS_TYPE" == "solo" ]; then
         configtxgen -profile TwoOrgsOrdererGenesis -channelID $SYS_CHANNEL -outputBlock ./channel-artifacts/genesis.block
-    elif [ "$CONSENSUS_TYPE" == "kafka" ]; then
-        configtxgen -profile SampleDevModeKafka -channelID $SYS_CHANNEL -outputBlock ./channel-artifacts/genesis.block
     elif [ "$CONSENSUS_TYPE" == "etcdraft" ]; then
-        configtxgen -profile SampleMultiNodeEtcdRaft -channelID $SYS_CHANNEL -outputBlock ./channel-artifacts/genesis.block
+        configtxgen -profile TwoOrgMultiNodeEtcdRaft -channelID $SYS_CHANNEL -outputBlock ./channel-artifacts/genesis.block
     else
         set +x
         echo "unrecognized CONSESUS_TYPE='$CONSENSUS_TYPE'. exiting"
@@ -465,8 +462,7 @@ function generateChannelArtifacts() {
     echo "### Generating channel configuration transaction 'channel.tx' ###"
     echo "#################################################################"
     set -x
-    configtxgen -profile TwoOrgsChannel -outputCreateChannelTx \
-        ./channel-artifacts/$CHANNEL_NAME.tx -channelID $CHANNEL_NAME
+    configtxgen -profile TwoOrgsChannel -outputCreateChannelTx ./channel-artifacts/$CHANNEL_NAME.tx -channelID $CHANNEL_NAME
     res=$?
     set +x
     if [ $res -ne 0 ]; then
@@ -519,10 +515,8 @@ CHANNEL_NAME="mychannel"
 COMPOSE_FILE=docker-compose-cli.yaml
 #
 COMPOSE_FILE_COUCH=docker-compose-couch.yaml
-# kafka and zookeeper compose file
-COMPOSE_FILE_KAFKA=docker-compose-kafka.yaml
 # two additional etcd/raft orderers
-COMPOSE_FILE_RAFT2=docker-compose-etcdraft2.yaml
+COMPOSE_FILE_RAFT=docker-compose-etcdraft.yaml
 # certificate authorities compose file
 COMPOSE_FILE_CA=docker-compose-ca.yaml
 #

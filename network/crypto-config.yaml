@@ -12,10 +12,16 @@ OrdererOrgs:
   # ---------------------------------------------------------------------------
   - Name: Orderer
     Domain: example.com
+    CA:
+      Country: CN
+      Province: Shanghai
+      Locality: PuDong
     Specs:
       - Hostname: orderer
         SANS:
           - "127.0.0.1"
+      - Hostname: orderer2
+      - Hostname: orderer3
 
 # ---------------------------------------------------------------------------
 # "PeerOrgs" - Definition of organizations managing peer nodes
@@ -28,12 +34,16 @@ PeerOrgs:
     Domain: org1.example.com
     EnableNodeOUs: true
     CA:
+      Country: CN
+      Province: Shanghai
+      Locality: PuDong
       SANS:
         - "127.0.0.1"
     Template:
       Count: 2
     Users:
       Count: 1
+
   # ---------------------------------------------------------------------------
   # Org2
   # ---------------------------------------------------------------------------
@@ -41,6 +51,9 @@ PeerOrgs:
     Domain: org2.example.com
     EnableNodeOUs: true
     CA:
+      Country: CN
+      Province: Shanghai
+      Locality: PuDong
       SANS:
         - "127.0.0.1"
     Template:
