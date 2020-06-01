@@ -2,6 +2,7 @@
 all: up
 
 up:
+	@#./byfn.sh up -a
 	@./byfn.sh up -a -o etcdraft
 
 down:
