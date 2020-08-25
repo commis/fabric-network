@@ -11,6 +11,9 @@ down:
 config:
 	@./byfn.sh generate
 
+cc:
+	@./byfn.sh deployCC -e sz_dataFatory
+
 .PHONY: clean
 clean:
 	@echo "every thing is clean up, no worry"

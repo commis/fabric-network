@@ -206,7 +206,8 @@ function networkUp() {
     fi
 
     # now run the end to end script
-    docker exec cli.demo scripts/script.sh $CHANNEL_NAME $CLI_DELAY $LANGUAGE $CLI_TIMEOUT $VERBOSE $NO_CHAINCODE
+    echo "test chaincode name: $CHAINCODE"
+    docker exec cli.demo scripts/script.sh "$CHANNEL_NAME" "$CLI_DELAY" "$LANGUAGE" "$CLI_TIMEOUT" "$VERBOSE" "$NO_CHAINCODE" "$CHAINCODE"
     if [ $? -ne 0 ]; then
         echo "ERROR !!!! Test failed"
         exit 1
@@ -309,6 +310,15 @@ function networkDown() {
         # remove the docker-compose yaml file that was customized to the example
         rm -f docker-compose-e2e.yaml
         rm -f connection-*
+    fi
+}
+
+function installChainCode() {
+    # now run the end to end script
+    docker exec cli.demo scripts/cc.sh "$CHANNEL_NAME" "$CLI_DELAY" "$LANGUAGE" "$CLI_TIMEOUT" "$VERBOSE" "$CHAINCODE"
+    if [ $? -ne 0 ]; then
+        echo "ERROR !!!! Test failed"
+        exit 1
     fi
 }
 
@@ -530,6 +540,7 @@ CONSENSUS_TYPE="solo"
 if [ "$1" = "-m" ]; then # supports old usage, muscle memory is powerful!
     shift
 fi
+CHAINCODE="mycc"
 MODE=$1
 shift
 # Determine whether starting, stopping, restarting, generating or upgrading
@@ -543,12 +554,14 @@ elif [ "$MODE" == "generate" ]; then
     EXPMODE="Generating certs and genesis block"
 elif [ "$MODE" == "upgrade" ]; then
     EXPMODE="Upgrading the network"
+elif [ "$MODE" == "deployCC" ]; then
+    EXPMODE="Install CC"
 else
     printHelp
     exit 1
 fi
 
-while getopts "h?c:t:d:f:s:l:i:o:anv" opt; do
+while getopts "h?c:t:d:f:s:l:i:o:e:anv" opt; do
     case "$opt" in
     h | \?)
         printHelp
@@ -578,6 +591,9 @@ while getopts "h?c:t:d:f:s:l:i:o:anv" opt; do
     o)
         CONSENSUS_TYPE=$OPTARG
         ;;
+    e)
+        CHAINCODE=$OPTARG
+        ;;
     a)
         CERTIFICATE_AUTHORITIES=true
         ;;
@@ -594,9 +610,9 @@ done
 
 if [ "${IF_COUCHDB}" == "couchdb" ]; then
     echo
-    echo "${EXPMODE} for channel '${CHANNEL_NAME}' with CLI timeout of '${CLI_TIMEOUT}' seconds and CLI delay of '${CLI_DELAY}' seconds and using database '${IF_COUCHDB}'"
+    echo "${EXPMODE} '${CHAINCODE}' for channel '${CHANNEL_NAME}' with CLI timeout of '${CLI_TIMEOUT}' seconds and CLI delay of '${CLI_DELAY}' seconds and using database '${IF_COUCHDB}'"
 else
-    echo "${EXPMODE} for channel '${CHANNEL_NAME}' with CLI timeout of '${CLI_TIMEOUT}' seconds and CLI delay of '${CLI_DELAY}' seconds"
+    echo "${EXPMODE} '${CHAINCODE}' for channel '${CHANNEL_NAME}' with CLI timeout of '${CLI_TIMEOUT}' seconds and CLI delay of '${CLI_DELAY}' seconds"
 fi
 # ask for confirmation to proceed
 #askProceed
@@ -615,6 +631,8 @@ elif [ "${MODE}" == "restart" ]; then ## Restart the network
     networkUp
 elif [ "${MODE}" == "upgrade" ]; then ## Upgrade the network from version 1.2.x to 1.3.x
     upgradeNetwork
+elif [ "${MODE}" == "deployCC" ]; then ## Upgrade the network from version 1.2.x to 1.3.x
+    installChainCode
 else
     printHelp
     exit 1

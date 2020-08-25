@@ -15,6 +15,7 @@ LANGUAGE="$3"
 TIMEOUT="$4"
 VERBOSE="$5"
 NO_CHAINCODE="$6"
+CHAINCODE="$7"
 : ${CHANNEL_NAME:="mychannel"}
 : ${DELAY:="3"}
 : ${LANGUAGE:="golang"}
@@ -34,7 +35,8 @@ if [ "$LANGUAGE" = "java" ]; then
     CC_SRC_PATH="/opt/gopath/src/github.com/chaincode/chaincode_example02/java/"
 fi
 
-echo "Channel name : "$CHANNEL_NAME
+echo "Channel name : $CHANNEL_NAME"
+echo "ChainCode name : $CHAINCODE"
 
 # import utils
 . scripts/utils.sh
@@ -89,18 +91,18 @@ if [ "${NO_CHAINCODE}" != "true" ]; then
     for org in 1 2; do
         for peer in 0 1; do
             echo "Installing chaincode on peer${peer}.org${org}..."
-            installChaincode ${peer} ${org}
+            installChaincode ${peer} ${org} ${CHAINCODE}
         done
     done
 
     # Instantiate chaincode on peer0.org2
     echo "Instantiating chaincode on peer0.org2..."
-    instantiateChaincode 0 2
+    instantiateChaincode 0 2 ${CHAINCODE}
 
     # Query chaincode on peer of org1
     echo "Querying chaincode on peer of org1..."
     for peer in 0 1; do
-        chaincodeQuery ${peer} 1 100
+        chaincodeQuery ${peer} 1 100 ${CHAINCODE}
     done
 
     # Invoke chaincode on peer0.org1 and peer0.org2
@@ -110,7 +112,7 @@ if [ "${NO_CHAINCODE}" != "true" ]; then
     # Query on chaincode on peer of org2, check if the result is 90
     echo "Querying chaincode on peer of org2..."
     for peer in 0 1; do
-        chaincodeQuery ${peer} 2 90
+        chaincodeQuery ${peer} 2 90 ${CHAINCODE}
     done
 fi
 
