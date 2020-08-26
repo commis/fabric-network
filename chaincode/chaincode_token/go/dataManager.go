@@ -395,6 +395,18 @@ func (s *DataContract) searchTitles(stub shim.ChaincodeStubInterface, args []str
 	return shim.Success(retDataListAsBytes)
 }
 
+func (s *DataContract) searchAllTitles(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	var retDataList []SearchTitleResponse
+	indexName := "data"
+	var keys []string
+	dataIterator, _ := stub.GetStateByPartialCompositeKey(indexName, keys)
+	retDataList = s.doSearchDataIterator(stub, dataIterator)
+
+	retDataListAsBytes, _ := json.Marshal(retDataList)
+
+	return shim.Success(retDataListAsBytes)
+}
+
 func (s *DataContract) searchByTitles(stub shim.ChaincodeStubInterface, searchRequest SearchTitleRequest) []SearchTitleResponse {
 	var retDataList []SearchTitleResponse
 	for _, title := range searchRequest.Titles {

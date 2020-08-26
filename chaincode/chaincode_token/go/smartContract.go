@@ -70,6 +70,8 @@ func (s *SmartContract) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return s.dataContract.showNameOfTitles(stub, args)
 	case "searchTitles":
 		return s.dataContract.searchTitles(stub, args)
+	case "searchAllTitles":
+		return s.dataContract.searchAllTitles(stub, args)
 	// data transfer manager
 	case "transferData":
 		return s.transferContract.transferData(stub, args)
