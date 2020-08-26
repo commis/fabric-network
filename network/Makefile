@@ -12,7 +12,7 @@ config:
 	@./byfn.sh generate
 
 cc:
-	@./byfn.sh deployCC -e sz_dataFatory
+	@./byfn.sh deployCC -e sz_mycc1
 
 .PHONY: clean
 clean:

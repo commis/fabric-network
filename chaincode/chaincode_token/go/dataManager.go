@@ -158,7 +158,10 @@ func (s *SearchTitleRequest) getDataTitleCompositeKeyAttributes(title string) []
 }
 
 func (s *SearchTitleRequest) getDataTitlePartialCompositeKeyAttributes() []string {
-	attributes := []string{strconv.Itoa(s.Type), s.Owner}
+	attributes := []string{strconv.Itoa(s.Type)}
+	if s.Owner != "" {
+		attributes = append(attributes, s.Owner)
+	}
 	return attributes
 }
 
@@ -378,6 +381,22 @@ func (s *DataContract) searchTitles(stub shim.ChaincodeStubInterface, args []str
 	}
 
 	var retDataList []SearchTitleResponse
+	if len(searchRequest.Titles) != 0 {
+		retDataList = s.searchByTitles(stub, searchRequest)
+	} else {
+		titleReqArgs := searchRequest.getDataTitlePartialCompositeKeyAttributes()
+		_, dataIndexName := GetDataCompositeKey(stub, titleReqArgs)
+		dataIterator, _ := stub.GetStateByPartialCompositeKey(dataIndexName, titleReqArgs)
+		retDataList = s.doSearchDataIterator(stub, dataIterator)
+	}
+
+	retDataListAsBytes, _ := json.Marshal(retDataList)
+
+	return shim.Success(retDataListAsBytes)
+}
+
+func (s *DataContract) searchByTitles(stub shim.ChaincodeStubInterface, searchRequest SearchTitleRequest) []SearchTitleResponse {
+	var retDataList []SearchTitleResponse
 	for _, title := range searchRequest.Titles {
 		titleReqArgs := searchRequest.getDataTitleCompositeKeyAttributes(title)
 		titleKey, _ := GetDataTitleCompositeKey(stub, titleReqArgs)
@@ -388,31 +407,71 @@ func (s *DataContract) searchTitles(stub shim.ChaincodeStubInterface, args []str
 
 			_, dataIndexName := GetDataCompositeKey(stub, titleReqArgs)
 			dataIterator, _ := stub.GetStateByPartialCompositeKey(dataIndexName, titleReqArgs)
-			defer dataIterator.Close()
-			for dataIterator.HasNext() {
-				item, _ := dataIterator.Next()
-
-				var dataDetail DataDescription
-				_ = json.Unmarshal(item.Value, &dataDetail)
-
-				_, dataAttributes, _ := stub.SplitCompositeKey(item.Key)
-				retDataList = append(retDataList, SearchTitleResponse{
-					Base: DataTitleRequest{
-						Type:   searchRequest.Type,
-						Owner:  searchRequest.Owner,
-						Title:  title,
-						Shelve: titleDetail.Shelve,
-						Price:  titleDetail.Price,
-					},
-					Hash:   dataAttributes[3],
-					Extend: dataDetail.Extend,
-				})
-			}
+			data := s.doSearchDataIteratorByTitle(stub, dataIterator, title, searchRequest, titleDetail)
+			retDataList = append(retDataList, data...)
 		} else {
 			fmt.Println(err.Error())
 		}
 	}
-	retDataListAsBytes, _ := json.Marshal(retDataList)
+	return retDataList
+}
 
-	return shim.Success(retDataListAsBytes)
+func (s *DataContract) doSearchDataIteratorByTitle(stub shim.ChaincodeStubInterface, dataIterator shim.StateQueryIteratorInterface,
+	title string, searchRequest SearchTitleRequest, titleDetail *DataTitleDescription) []SearchTitleResponse {
+	var retDataList []SearchTitleResponse
+	defer dataIterator.Close()
+	for dataIterator.HasNext() {
+		item, _ := dataIterator.Next()
+
+		var dataDetail DataDescription
+		_ = json.Unmarshal(item.Value, &dataDetail)
+
+		_, dataAttributes, _ := stub.SplitCompositeKey(item.Key)
+		retDataList = append(retDataList, SearchTitleResponse{
+			Base: DataTitleRequest{
+				Type:   searchRequest.Type,
+				Owner:  searchRequest.Owner,
+				Title:  title,
+				Shelve: titleDetail.Shelve,
+				Price:  titleDetail.Price,
+			},
+			Hash:   dataAttributes[3],
+			Extend: dataDetail.Extend,
+		})
+	}
+	return retDataList
+}
+
+func (s *DataContract) doSearchDataIterator(stub shim.ChaincodeStubInterface, dataIterator shim.StateQueryIteratorInterface) []SearchTitleResponse {
+	var retDataList []SearchTitleResponse
+	defer dataIterator.Close()
+	for dataIterator.HasNext() {
+		item, _ := dataIterator.Next()
+
+		// 获取titleDetail信息
+		_, attrs, _ := stub.SplitCompositeKey(item.Key)
+		attrs = attrs[0:3]
+		titleKey, _ := GetDataTitleCompositeKey(stub, attrs)
+		if titleDetail, err := GetDataTitle(stub, titleKey); err == nil {
+			var dataDetail DataDescription
+			_ = json.Unmarshal(item.Value, &dataDetail)
+
+			typeValue, _ := strconv.Atoi(attrs[0])
+			_, dataAttributes, _ := stub.SplitCompositeKey(item.Key)
+			retDataList = append(retDataList, SearchTitleResponse{
+				Base: DataTitleRequest{
+					Type:   typeValue,
+					Owner:  attrs[1],
+					Title:  attrs[2],
+					Shelve: titleDetail.Shelve,
+					Price:  titleDetail.Price,
+				},
+				Hash:   dataAttributes[3],
+				Extend: dataDetail.Extend,
+			})
+		} else {
+			fmt.Println(err.Error())
+		}
+	}
+	return retDataList
 }

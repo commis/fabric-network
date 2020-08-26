@@ -206,7 +206,6 @@ function networkUp() {
     fi
 
     # now run the end to end script
-    echo "test chaincode name: $CHAINCODE"
     docker exec cli.demo scripts/script.sh "$CHANNEL_NAME" "$CLI_DELAY" "$LANGUAGE" "$CLI_TIMEOUT" "$VERBOSE" "$NO_CHAINCODE" "$CHAINCODE"
     if [ $? -ne 0 ]; then
         echo "ERROR !!!! Test failed"

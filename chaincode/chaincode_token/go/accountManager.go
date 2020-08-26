@@ -16,13 +16,13 @@ import (
  */
 
 type Account struct {
-	Name     string `json:"name"`     /*账户名称*/
-	Password string `json:"password"` /*账户基本信息*/
-	Type     int    `json:"type"`     /*账户类别：企业、政府*/
-	OrgName  string `json:"orgName"`  /*企业或组织名称*/
-	Address  string `json:"address"`  /*账户地址*/
-	Frozen   bool   `json:"-"`        /*账户停用标记*/
-	Token    int64  `json:"token"`    /*账户积分*/
+	Name      string `json:"name"`      /*账户名称*/
+	Password  string `json:"password"`  /*账户基本信息*/
+	Type      int    `json:"type"`      /*账户类别：企业、政府*/
+	OrgName   string `json:"orgName"`   /*企业或组织名称*/
+	PublicKey string `json:"publicKey"` /*账户公钥信息*/
+	Frozen    bool   `json:"-"`         /*账户停用标记*/
+	Token     int64  `json:"token"`     /*账户积分*/
 }
 
 func (a *Account) toBytes() []byte {
@@ -48,13 +48,13 @@ func NewAccount(info Account) Account {
 	hashUtils := DefaultHashUtil()
 	storePassword := hashUtils.secret(info.Password)
 	return Account{
-		Name:     info.Name,
-		Password: storePassword,
-		Type:     info.Type,
-		OrgName:  info.OrgName,
-		Address:  info.Address,
-		Frozen:   false,
-		Token:    0,
+		Name:      info.Name,
+		Password:  storePassword,
+		Type:      info.Type,
+		OrgName:   info.OrgName,
+		PublicKey: info.PublicKey,
+		Frozen:    false,
+		Token:     0,
 	}
 }
 
