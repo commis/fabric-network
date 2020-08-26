@@ -226,7 +226,8 @@ func (s *AccountContract) mintToken(stub shim.ChaincodeStubInterface, args []str
 	}
 	account.Token += int64(_amount)
 
-	err = stub.PutState(_account, account.toBytes())
+	accountKey, _ := GetAccountCompositeKey(stub, _account)
+	err = stub.PutState(accountKey, account.toBytes())
 	if err != nil {
 		return shim.Error(err.Error())
 	} else {
